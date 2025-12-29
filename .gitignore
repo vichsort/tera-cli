@@ -1,0 +1,50 @@
+# ==========================
+# SEGURANÇA & AMBIENTE (CRÍTICO)
+# ==========================
+.env
+.env.*
+!.env.example
+instance/
+config_local.py
+secrets.py
+
+__pycache__/
+*.py[cod]
+*$py.class
+*.manifest
+*.spec
+.cache
+
+# Ambientes Virtuais
+venv/
+.venv/
+env/
+.env/
+
+migrations/versions/__pycache__/
+
+
+# ==========================
+# IDEs & EDITORES
+# ==========================
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ==========================
+# SISTEMA OPERACIONAL
+# ==========================
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ==========================
+# OUTROS / LOGS
+# ==========================
+*.log
+ngrok
+ngrok.exe
+coverage/
+htmlcov/

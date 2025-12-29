@@ -1,0 +1,352 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Escutas API",
+    "version": "1.0.0",
+    "description": "API para gerenciamento de reviews de álbuns musicais."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5000"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  },
+  "paths": {
+    "/api/albums/search": {
+      "get": {
+        "summary": "Buscar Álbuns",
+        "operationId": "getApiAlbumsSearch",
+        "tags": [
+          "Albums"
+        ],
+        "description": "Busca por álbuns utilizando a API do Spotify.",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "description": "Termo de pesquisa (Nome do álbum ou artista).",
+            "schema": {
+              "type": "string",
+              "minLength": 2
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "artist": {
+                            "type": "string"
+                          },
+                          "year": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "example": {
+                  "status": "success",
+                  "data": [
+                    {
+                      "id": "4LH4d3cOWNNsVw41Gqt2kv",
+                      "name": "The Dark Side of the Moon",
+                      "artist": "Pink Floyd",
+                      "year": "1973"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Erro de Validação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "message": "Termo muito curto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não Autorizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "message": "Não Autorizado"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/login": {
+      "get": {
+        "summary": "Iniciar Login",
+        "operationId": "getApiLogin",
+        "tags": [
+          "Auth"
+        ],
+        "description": "Redireciona para o Spotify.",
+        "parameters": [],
+        "responses": {
+          "302": {
+            "description": "Redirecionamento para o Spotify",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "url": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "url": "https://accounts.spotify.com/authorize?..."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reviews": {
+      "post": {
+        "summary": "Criar Nova Review",
+        "operationId": "postApiReviews",
+        "tags": [
+          "Reviews"
+        ],
+        "description": null,
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "Review Criada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "tier": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "status": "success",
+                  "id": "uuid-da-review",
+                  "tier": "S"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "album": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "artist": {
+                        "type": "string"
+                      },
+                      "cover": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "review_text": {
+                    "type": "string"
+                  },
+                  "tracks": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "userScore": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                },
+                "required": [
+                  "album",
+                  "review_text",
+                  "tracks"
+                ]
+              },
+              "example": {
+                "album": {
+                  "id": "4LH4d3cOWNNsVw41Gqt2kv",
+                  "name": "Dark Side of the Moon",
+                  "artist": "Pink Floyd",
+                  "cover": "https://i.scdn.co/..."
+                },
+                "review_text": "Obra prima.",
+                "tracks": [
+                  {
+                    "id": "t1",
+                    "name": "Speak to Me",
+                    "userScore": 10
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/{user_uuid}": {
+      "get": {
+        "summary": "Perfil Público",
+        "operationId": "getApiUsersUserUuid",
+        "tags": [
+          "Users"
+        ],
+        "description": null,
+        "parameters": [
+          {
+            "name": "user_uuid",
+            "in": "path",
+            "required": true,
+            "description": null,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "display_name": {
+                      "type": "string"
+                    },
+                    "avatar_url": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "id": "a0eebc...",
+                  "display_name": "Maria Music",
+                  "avatar_url": "https://..."
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Usuário não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "message": "Usuário não encontrado"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    }
+  }
+}
