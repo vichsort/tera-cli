@@ -93,7 +93,6 @@ class TeraConverter:
         """Monta o objeto de parâmetro individual."""
         schema = self._infer_schema_recursive(param.example)
         
-        # Adiciona validações extras se existirem
         if param.min_length is not None:
             schema["minLength"] = param.min_length
         if param.max_length is not None:
@@ -115,7 +114,6 @@ class TeraConverter:
         required_fields = []
 
         for field in fields:
-            # A mágica recursiva acontece aqui usando o exemplo do campo
             properties[field.name] = self._infer_schema_recursive(field.example)
             
             if field.description:
@@ -148,7 +146,6 @@ class TeraConverter:
         """Monta o dicionário de responses."""
         output = {}
 
-        # Success Response
         success_schema = self._infer_schema_recursive(responses.success.example)
         output[str(responses.success.status)] = {
             "description": responses.success.description,
@@ -180,7 +177,6 @@ class TeraConverter:
 
     def _infer_schema_recursive(self, data: Any) -> Dict[str, Any]:
         """
-        🔥 A ALMA DO NEGÓCIO 🔥
         Recebe um dado (example) e infere a estrutura JSON Schema recursivamente.
         """
         if isinstance(data, bool):
@@ -193,7 +189,6 @@ class TeraConverter:
             return {"type": "number"}
         
         elif isinstance(data, str):
-            # Tenta detectar UUID ou Date futuramente se quiser
             return {"type": "string"}
         
         elif isinstance(data, dict):
@@ -218,7 +213,7 @@ class TeraConverter:
         elif data is None:
             return {"type": "string", "nullable": True}
 
-        return {"type": "string"} # Fallback
+        return {"type": "string"}
 
     def _generate_operation_id(self, method: str, path: str) -> str:
         """Gera um ID único: GET /users/search -> getUsersSearch"""
