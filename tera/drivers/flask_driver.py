@@ -1,27 +1,27 @@
 import re
 from typing import Any, List, Set
+from tera.drivers.inspection import loader, parser, ast_parser, type_utils
 from tera.domain.models import (
     TeraSchema, 
     ApiConfig, 
     Endpoint, 
     EndpointParams, 
     ParamField, 
+    BodyField,
     EndpointResponses, 
     ResponseSuccess
 )
-from tera.drivers.inspection import loader, parser
 
 class FlaskAppDriver:
     """
-    Driver capable of reading an Flask app via instrospection.
-    Translates Routes and View Functions into TeraSchema.
+    Driver capable of reading an Flask app via instrospection + static analysis.
+    Detects: Routes, Docs, Auth (Decorators) and Body (Pydantic).
     """
     def __init__(self, app_import_string: str):
         self.import_string = app_import_string
 
     def load(self) -> TeraSchema:
         app = loader.load_app_instance(self.import_string)
-        
         endpoints: List[Endpoint] = []
         
         for rule in app.url_map.iter_rules():
@@ -31,7 +31,7 @@ class FlaskAppDriver:
             for method in rule.methods:
                 if method in ['HEAD', 'OPTIONS']:
                     continue
-
+                
                 endpoint = self._process_rule(app, rule, method)
                 endpoints.append(endpoint)
 
@@ -49,44 +49,82 @@ class FlaskAppDriver:
         view_func = app.view_functions[rule.endpoint]
         doc_info = parser.parse_docstring(view_func)
         sig_info = parser.parse_signature(view_func)
+        decorators = ast_parser.get_decorators(view_func)
+        auth_required = self._detect_auth(decorators)
         path_openapi = self._convert_flask_path_to_openapi(str(rule))
-        path_vars: Set[str] = set(rule.arguments)     
+        path_vars: Set[str] = set(rule.arguments)
         query_params: List[ParamField] = []
         path_params: List[ParamField] = []
+        body_fields: List[BodyField] = []
 
         for name, type_hint in sig_info.parameters.items():
-            
-            example_value = self._get_example_for_type(type_hint)
-            
-            field = ParamField(
-                name=name,
-                example=example_value,
-                required=True,
-                description=None
-            )
-
             if name in path_vars:
-                path_params.append(field)
-            else:
-                field.required = False
-                query_params.append(field)
+                path_params.append(ParamField(
+                    name=name,
+                    required=True,
+                    example=self._get_example_for_type(type_hint),
+                    description="Path Parameter"
+                ))
+                continue
+
+            if method in ['POST', 'PUT', 'PATCH'] and type_utils.is_pydantic_model(type_hint):
+                extracted_fields = self._extract_pydantic_fields(type_hint)
+                body_fields.extend(extracted_fields)
+                continue
+
+            query_params.append(ParamField(
+                name=name,
+                required=False,
+                example=self._get_example_for_type(type_hint),
+                description="Query Parameter"
+            ))
 
         return Endpoint(
             path=path_openapi,
             method=method,
             summary=doc_info.summary,
             description=doc_info.description,
+            auth_required=auth_required,
             params=EndpointParams(
                 path=path_params,
-                query=query_params
+                query=query_params,
+                header=[]
             ),
+            body=body_fields,
             responses=EndpointResponses(
                 success=ResponseSuccess(
-                    status=200,
+                    status=200 if method != 'POST' else 201,
                     example={"message": "Success"}
                 )
             )
         )
+
+    def _detect_auth(self, decorators: List[str]) -> bool:
+        """Verifies keywords in decorators to detect auth requirements."""
+        security_keywords = {'jwt', 'login', 'auth', 'token', 'api_key', 'permission', 'admin', 'secure'}
+        for dec in decorators:
+            if any(keyword in dec.lower() for keyword in security_keywords):
+                return True
+        return False
+
+    def _extract_pydantic_fields(self, model_class: Any) -> List[BodyField]:
+        """Converts Pydantic model fields into BodyField list."""
+        schema = type_utils.get_pydantic_schema(model_class)
+        properties = schema.get('properties', {})
+        required_fields = schema.get('required', [])
+        
+        fields = []
+        for name, props in properties.items():
+            prop_type = props.get('type', 'string')
+            example = self._get_example_from_schema_type(prop_type)
+            
+            fields.append(BodyField(
+                name=name,
+                required=(name in required_fields),
+                description=props.get('description'),
+                example=example
+            ))
+        return fields
 
     def _convert_flask_path_to_openapi(self, flask_path: str) -> str:
         """
@@ -101,16 +139,20 @@ class FlaskAppDriver:
         """
         return re.sub(r"<(?:\w+:)?(\w+)>", r"{\1}", flask_path)
 
+    def _get_example_from_schema_type(self, schema_type: str) -> Any:
+        """Generates example based on JSON Schema type."""
+        if schema_type == 'integer': return 0
+        if schema_type == 'number': return 0.0
+        if schema_type == 'boolean': return True
+        if schema_type == 'array': return []
+        if schema_type == 'object': return {}
+        return "string"
+
     def _get_example_for_type(self, type_hint: Any) -> Any:
         """Generates an example based on the type hint."""
-        if type_hint is int:
-            return 0
-        if type_hint is float:
-            return 0.0
-        if type_hint is bool:
-            return True
-        if type_hint is dict:
-            return {}
-        if type_hint is list:
-            return []
+        if type_hint is int: return 0
+        if type_hint is float: return 0.0
+        if type_hint is bool: return True
+        if type_hint is dict: return {}
+        if type_hint is list: return []
         return "string"
