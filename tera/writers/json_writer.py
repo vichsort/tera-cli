@@ -1,7 +1,6 @@
 import json
 from pathlib import Path
 from tera.domain.models import TeraSchema
-from tera.contracts.writers import TeraWriter
 from tera.adapters.openapi import TeraOpenApiAdapter 
 
 class JsonFileWriter:
