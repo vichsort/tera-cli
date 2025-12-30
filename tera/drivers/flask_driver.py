@@ -1,7 +1,7 @@
 import re
 from typing import Any, List, Set
-from tera.drivers.inspection import loader, parser, ast_parser, type_utils
-from tera.domain.models import (
+from tera.drivers import loader, parser, ast_parser, type_utils
+from tera.domain import (
     TeraSchema, 
     ApiConfig, 
     Endpoint, 

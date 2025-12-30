@@ -1,6 +1,6 @@
 from pathlib import Path
 import yaml
-from tera.domain.models import TeraSchema
+from tera.domain import TeraSchema
 
 class YamlFileDriver:
     """

@@ -1,5 +1,5 @@
 from typing import Protocol
-from tera.domain.models import TeraSchema
+from tera.domain import TeraSchema
 
 class TeraWriter(Protocol):
     """

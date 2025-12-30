@@ -1,7 +1,7 @@
 import yaml
 from pathlib import Path
-from tera.domain.models import TeraSchema
-from tera.adapters.openapi import TeraOpenApiAdapter
+from tera.domain import TeraSchema
+from tera.adapters import TeraOpenApiAdapter
 
 class YamlFileWriter:
     """

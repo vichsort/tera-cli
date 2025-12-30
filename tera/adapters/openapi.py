@@ -1,6 +1,6 @@
 from typing import Any, Dict, List
 import re
-from tera.domain.models import TeraSchema, Endpoint, ParamField, BodyField
+from tera.domain import TeraSchema, Endpoint, ParamField, BodyField
 
 class TeraOpenApiAdapter:
     """

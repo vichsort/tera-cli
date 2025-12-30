@@ -14,6 +14,7 @@ __pycache__/
 *.manifest
 *.spec
 .cache
+.pytest_cache/
 
 # Ambientes Virtuais
 venv/
