@@ -46,5 +46,5 @@ def test_build_file_not_found():
     result = runner.invoke(app, ["ghost_file.yaml"])
     
     assert result.exit_code != 0
-    
-    assert "File not found" in result.output
+
+    assert "does not exist" in result.output

@@ -1,5 +1,5 @@
 import pytest
-from tera.models.inputs import TeraSchema, Endpoint, ResponseSuccess, EndpointResponses
+from tera.domain.models import TeraSchema, Endpoint, ResponseSuccess, EndpointResponses
 
 @pytest.fixture
 def minimal_schema_model():
