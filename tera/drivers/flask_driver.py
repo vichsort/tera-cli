@@ -1,6 +1,6 @@
 import re
 from typing import Any, List, Set
-from tera.drivers import loader, parser, ast_parser, type_utils
+from tera.drivers.inspection import loader, parser, ast_parser, type_utils
 from tera.domain import (
     TeraSchema, 
     ApiConfig, 
@@ -127,7 +127,7 @@ class FlaskAppDriver:
         return fields
 
     def _convert_flask_path_to_openapi(self, flask_path: str) -> str:
-        """
+        r"""
         Converts '/user/<int:id>' to '/user/{id}'
         Regex:
         <       : Start
