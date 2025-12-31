@@ -6,7 +6,8 @@ from tera.writers import (
     JsonFileWriter, 
     YamlFileWriter, 
     OpenApiJsonWriter, 
-    OpenApiYamlWriter
+    OpenApiYamlWriter,
+    MarkdownWriter
 )
 
 def get_driver(source: Union[str, Path]) -> TeraDriver:
@@ -47,5 +48,8 @@ def get_writer(output_path: Path, format_style: Literal['tera', 'openapi'] = 'te
         if is_yaml:
             return OpenApiYamlWriter(output_path)
         return OpenApiJsonWriter(output_path)
+    
+    if format_style == 'markdown':
+        return MarkdownWriter(output_path)
         
     raise ValueError(f"Unknown format style: {format_style}")

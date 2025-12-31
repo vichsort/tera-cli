@@ -60,38 +60,40 @@ def _execute_pipeline(input_source: str, output_path: Path, format_style: str = 
 def build(
     input_file: Path = typer.Argument(
         "docs.yaml",
-        help="Path to the YAML file. Default: docs.yaml"
+        help="Path to the Tera YAML file. Default: docs.yaml"
     ),
     output_file: Optional[Path] = typer.Option(
         None, 
-        "--output", "-o", 
-        help="Path to the output JSON/YAML."
+        "--output", "-o",
+        help="Path to the output JSON/YAML (OpenAPI format)."
     )
 ):
-    """Build documentation from a YAML file."""
-    typer.secho(f"Building from YAML...", fg=typer.colors.BLUE)
+    """
+    Reads a Tera YAML file and generates standard OpenAPI documentation.
+    """
+    typer.secho(f"Building OpenAPI from {input_file}...", fg=typer.colors.BLUE)
     
     config = loader.load_config()
+    final_output = output_file or config.output or input_file.with_suffix('.json')
 
-    if not output_file:
-        output_file = config.output or input_file.with_suffix('.json')
-
-    _execute_pipeline(str(input_file), output_file, format_style='openapi')
+    _execute_pipeline(str(input_file), final_output, format_style='openapi')
 
 
 @app.command()
 def scan(
     app_id: Optional[str] = typer.Argument(
         None,
-        help="Import string of the Flask app (e.g. 'main:app')"
+        help="Import string (e.g. 'main:app'). If empty, reads from .teraconfig.toml"
     ),
     output_file: Optional[Path] = typer.Option(
         None, 
         "--output", "-o",
-        help="Path to the output file."
+        help="Path to the output Tera YAML file."
     )
 ):
-    """Scan a Flask application code and auto-generate documentation skeleton."""
+    """
+    Scans code and generates a canonical Tera YAML file (docs.yaml).
+    """
     config = loader.load_config()
     final_target = app_id or config.target
     
@@ -103,6 +105,41 @@ def scan(
         raise typer.Exit(code=1)
 
     typer.secho(f"Scanning Flask App: {final_target}...", fg=typer.colors.MAGENTA)
+
     final_output = output_file or config.output or Path("docs.yaml")
 
     _execute_pipeline(final_target, final_output, format_style='tera')
+
+@app.command()
+def export(
+    input_file: Path = typer.Argument(
+        "docs.yaml",
+        help="Path to the Tera YAML file."
+    ),
+    format: str = typer.Option(
+        "markdown",
+        "--format", "-f",
+        help="Target format (markdown, html, postman)."
+    ),
+    output_file: Optional[Path] = typer.Option(
+        None,
+        "--output", "-o",
+        help="Path to the output file."
+    )
+):
+    """
+    Export documentation to external formats (Markdown, HTML, Postman).
+    """
+    typer.secho(f"Exporting to {format.upper()}...", fg=typer.colors.CYAN)
+
+    if not output_file:
+        extension_map = {
+            'markdown': '.md',
+            'html': '.html',
+            'postman': '.json'
+        }
+
+        ext = extension_map.get(format, '.txt')
+        output_file = input_file.with_suffix(ext)
+
+    _execute_pipeline(str(input_file), output_file, format_style=format)
