@@ -11,7 +11,8 @@ class BaseField(BaseModel):
     model_config = ConfigDict(extra='forbid')
 
     name: str
-    example: Any
+    type: str = "string"
+    example: Any = None
     required: bool = False
     description: Optional[str] = None
     min_length: Optional[int] = None
@@ -49,7 +50,7 @@ class ResponseSuccess(BaseModel):
 
     status: int = 200
     description: str = "Sucesso"
-    example: Any
+    example: Any = None
 
 class ResponseError(BaseModel):
     model_config = ConfigDict(extra='forbid')
