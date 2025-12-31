@@ -1,8 +1,13 @@
 from pathlib import Path
-from typing import Union
+from typing import Union, Literal
 from tera.contracts import TeraDriver, TeraWriter
 from tera.drivers import YamlFileDriver, FlaskAppDriver
-from tera.writers import JsonFileWriter, YamlFileWriter
+from tera.writers import (
+    JsonFileWriter, 
+    YamlFileWriter, 
+    OpenApiJsonWriter, 
+    OpenApiYamlWriter
+)
 
 def get_driver(source: Union[str, Path]) -> TeraDriver:
     """
@@ -22,12 +27,25 @@ def get_driver(source: Union[str, Path]) -> TeraDriver:
         "Supported formats: .yaml files or 'module:app' strings."
     )
 
-def get_writer(output_path: Path) -> TeraWriter:
+def get_writer(output_path: Path, format_style: Literal['tera', 'openapi'] = 'tera') -> TeraWriter:
     """
     Factory Method for output writers.
-    Decides which writer to instantiate based on the output file extension.
-    """
-    if output_path.suffix in ['.yaml', '.yml']:
-        return YamlFileWriter(output_path)
+    Decides based on file extension AND the desired format style.
     
-    return JsonFileWriter(output_path)
+    Args:
+        output_path: Destination path.
+        format_style: 'tera' (Canonical YAML/JSON) or 'openapi' (Export format).
+    """
+    is_yaml = output_path.suffix in ['.yaml', '.yml']
+    
+    if format_style == 'tera':
+        if is_yaml:
+            return YamlFileWriter(output_path)
+        return JsonFileWriter(output_path)
+    
+    if format_style == 'openapi':
+        if is_yaml:
+            return OpenApiYamlWriter(output_path)
+        return OpenApiJsonWriter(output_path)
+        
+    raise ValueError(f"Unknown format style: {format_style}")

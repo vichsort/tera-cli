@@ -1,8 +1,10 @@
-from pathlib import Path
 import yaml
+from pathlib import Path
 from tera.domain import TeraSchema
+from tera.contracts import TeraDriver
+from tera.exceptions import TeraError
 
-class YamlFileDriver:
+class YamlFileDriver(TeraDriver):
     """
     Concrete implementation of TeraDriver.
     Reads a YAML file from disk and converts it to TeraSchema.
@@ -11,15 +13,19 @@ class YamlFileDriver:
         self.file_path = file_path
 
     def load(self) -> TeraSchema:
-        # Validation
         if not self.file_path.exists():
             raise FileNotFoundError(f"The file '{self.file_path}' does not exist.")
 
-        # Raw Read
-        with open(self.file_path, 'r', encoding='utf-8') as f:
-            raw_data = yaml.safe_load(f)
+        try:
+            with open(self.file_path, 'r', encoding='utf-8') as f:
+                raw_data = yaml.safe_load(f)
 
-        if raw_data is None:
-            raise ValueError("The YAML file is empty.")
+            if raw_data is None:
+                raise ValueError("The YAML file is empty.")
 
-        return TeraSchema(**raw_data)
+            return TeraSchema(**raw_data)
+
+        except yaml.YAMLError as e:
+            raise TeraError("YAML Parsing Error", f"Invalid YAML syntax: {e}")
+        except Exception as e:
+            raise TeraError("Schema Validation Error", f"Could not load Tera Schema: {e}")

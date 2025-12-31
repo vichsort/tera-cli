@@ -1,0 +1,3 @@
+target = "meu_doc_configurado.yaml"
+output = "docs.json"
+ignore = [".venv", "tests"]

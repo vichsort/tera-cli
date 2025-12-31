@@ -1,7 +1,8 @@
 import typer
+from typing import Optional
 from pathlib import Path
 from pydantic import ValidationError
-from tera.core import factory
+from tera.core import factory, loader
 from tera.services import run_pipeline
 from tera.exceptions import TeraError
 
@@ -23,14 +24,14 @@ def _print_validation_error(e: ValidationError):
         msg = err['msg']
         typer.secho(f"   {loc}: {msg}", fg=typer.colors.YELLOW)
 
-def _execute_pipeline(input_source: str, output_path: Path):
+def _execute_pipeline(input_source: str, output_path: Path, format_style: str = 'tera'):
     """
     Helper function to execute the pipeline safely.
     Connects: Factory -> Pipeline -> UI
     """
     try:
         driver = factory.get_driver(input_source)
-        writer = factory.get_writer(output_path)
+        writer = factory.get_writer(output_path, format_style=format_style)
 
         run_pipeline(driver, writer)
         _print_success(input_source, str(output_path))
@@ -61,7 +62,7 @@ def build(
         "docs.yaml",
         help="Path to the YAML file. Default: docs.yaml"
     ),
-    output_file: Path = typer.Option(
+    output_file: Optional[Path] = typer.Option(
         None, 
         "--output", "-o", 
         help="Path to the output JSON/YAML."
@@ -70,25 +71,38 @@ def build(
     """Build documentation from a YAML file."""
     typer.secho(f"Building from YAML...", fg=typer.colors.BLUE)
     
-    if not output_file:
-        output_file = input_file.with_suffix('.json')
+    config = loader.load_config()
 
-    _execute_pipeline(str(input_file), output_file)
+    if not output_file:
+        output_file = config.output or input_file.with_suffix('.json')
+
+    _execute_pipeline(str(input_file), output_file, format_style='openapi')
 
 
 @app.command()
 def scan(
-    app_id: str = typer.Argument(
-        ...,
+    app_id: Optional[str] = typer.Argument(
+        None,
         help="Import string of the Flask app (e.g. 'main:app')"
     ),
-    output_file: Path = typer.Option(
-        "docs.yaml", 
+    output_file: Optional[Path] = typer.Option(
+        None, 
         "--output", "-o",
         help="Path to the output file."
     )
 ):
     """Scan a Flask application code and auto-generate documentation skeleton."""
-    typer.secho(f"Scanning Flask App: {app_id}...", fg=typer.colors.MAGENTA)
+    config = loader.load_config()
+    final_target = app_id or config.target
+    
+    if not final_target:
+        _print_error(
+            "Missing Target", 
+            "Please provide an app string (e.g., 'tera scan main:app') OR set 'target' in .teraconfig.toml"
+        )
+        raise typer.Exit(code=1)
 
-    _execute_pipeline(app_id, output_file)
+    typer.secho(f"Scanning Flask App: {final_target}...", fg=typer.colors.MAGENTA)
+    final_output = output_file or config.output or Path("docs.yaml")
+
+    _execute_pipeline(final_target, final_output, format_style='tera')
