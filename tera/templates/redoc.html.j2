@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>{{ title }} - Documentation</title>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://fonts.googleapis.com/css?family=Montserrat:300,400,700|Roboto:300,400,700" rel="stylesheet">
+    <style>
+      body { margin: 0; padding: 0; }
+    </style>
+  </head>
+  <body>
+    <div id="redoc-container"></div>
+
+    <script>
+        window.process = { 
+            env: { NODE_ENV: 'production' },
+            cwd: function() { return '/'; },
+            platform: 'browser'
+        };
+    </script>
+
+    <script src="https://unpkg.com/redoc@2.0.0-rc.56/bundles/redoc.standalone.js"></script>
+    
+    <script>
+      const spec = {{ spec_json | safe }};
+
+      function initRedoc() {
+        if (typeof Redoc === 'undefined') {
+            document.body.innerHTML = '<h3 style="color:red; text-align: center; margin-top: 50px;">Erro ao carregar Redoc (Check Internet)</h3>';
+            return;
+        }
+
+        Redoc.init(spec, {
+            scrollYOffset: 50,
+            theme: {
+                colors: { primary: { main: '#32329f' } },
+                typography: {
+                    fontFamily: '"Roboto", sans-serif',
+                    headings: { fontFamily: '"Montserrat", sans-serif' }
+                }
+            }
+        }, document.getElementById('redoc-container'));
+      }
+
+      window.onload = initRedoc;
+    </script>
+  </body>
+</html>
