@@ -50,3 +50,6 @@ ngrok.exe
 coverage/
 htmlcov/
 app_teste.py
+*.egg-info/
+build/
+dist/
