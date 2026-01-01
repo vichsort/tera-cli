@@ -1,3 +1,6 @@
 target = "meu_doc_configurado.yaml"
 output = "docs.yaml"
 ignore = [".venv", "tests"]
+
+[lint]
+ignore = ["missing_description"]

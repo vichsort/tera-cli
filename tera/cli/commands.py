@@ -1,10 +1,12 @@
 import typer
+import json
 from typing import Optional
 from pathlib import Path
 from pydantic import ValidationError
 from tera.core import factory, loader
-from tera.services import run_pipeline
+from tera.services import run_pipeline, LinterService
 from tera.exceptions import TeraError
+from tera.domain import LintSeverity
 
 app = typer.Typer(help="Tera CLI - Documentation Converter")
 
@@ -23,6 +25,37 @@ def _print_validation_error(e: ValidationError):
         loc = " -> ".join([str(x) for x in err['loc']])
         msg = err['msg']
         typer.secho(f"   {loc}: {msg}", fg=typer.colors.YELLOW)
+
+def _print_human_lint_report(issues):
+    """Renders colored output for cli"""
+    if not issues:
+        return
+
+    typer.echo("")
+    for issue in issues:
+        if issue.severity == LintSeverity.ERROR:
+            color = typer.colors.RED
+            icon = "❌"
+            label = "ERROR"
+        else:
+            color = typer.colors.YELLOW
+            icon = "⚠️ "
+            label = "WARN "
+
+        loc_str = f"[{issue.location}] " if issue.location else ""
+        line_str = f"(Line {issue.line}) " if issue.line else ""
+
+        message = f"{icon}  {label}  {issue.message}"
+        meta = f"    Source: {loc_str}{line_str}| Code: {issue.code}"
+        
+        typer.secho(message, fg=color, bold=True)
+        typer.secho(meta, fg=typer.colors.BRIGHT_BLACK)
+        typer.echo("")
+
+def _print_json_lint_report(issues):
+    """Renders output as JSON for cli"""
+    output = [issue.dict() for issue in issues]
+    typer.echo(json.dumps(output, indent=2))
 
 def _execute_pipeline(input_source: str, output_path: Path, format_style: str = 'tera'):
     """
@@ -143,3 +176,40 @@ def export(
         output_file = input_file.with_suffix(ext)
 
     _execute_pipeline(str(input_file), output_file, format_style=format)
+
+@app.command()
+def lint(
+    file_path: Path = typer.Argument(..., help="Path to the YAML/JSON file definition."),
+    to_json: bool = typer.Option(False, "--json", "-j", help="Output results as JSON (for CI/CD).")
+):
+    """
+    Analyzes the documentation file for syntax errors, schema violations, and quality issues.
+    """
+    config = loader.load_config()
+    service = LinterService(config=config)
+    
+    if not to_json:
+        typer.secho(f"Linting '{file_path}'...", fg=typer.colors.BLUE)
+        if config.lint.ignore:
+            typer.secho(f"Ignoring rules: {', '.join(config.lint.ignore)}", fg=typer.colors.BRIGHT_BLACK)
+    
+    # 3. Executa... (o resto continua igual)
+    issues = service.lint(file_path)
+
+    if to_json:
+        _print_json_lint_report(issues)
+    else:
+        _print_human_lint_report(issues)
+
+    has_errors = any(i.severity == LintSeverity.ERROR for i in issues)
+    
+    if has_errors:
+        if not to_json:
+            typer.secho("\nValidation failed with errors.", fg=typer.colors.RED, bold=True)
+        raise typer.Exit(code=1)
+    
+    if not to_json:
+        if issues:
+            typer.secho("\n⚠️  Passed with warnings.", fg=typer.colors.YELLOW, bold=True)
+        else:
+            typer.secho("\n✅ No issues found. Good job!", fg=typer.colors.GREEN, bold=True)
