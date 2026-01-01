@@ -4,7 +4,7 @@ from typing import Optional
 from pathlib import Path
 from pydantic import ValidationError
 from tera.core import factory, loader
-from tera.services import run_pipeline, LinterService
+from tera.services import run_pipeline, InitService, LinterService
 from tera.exceptions import TeraError
 from tera.domain import LintSeverity
 
@@ -87,6 +87,46 @@ def _execute_pipeline(input_source: str, output_path: Path, format_style: str = 
         raise typer.Exit(code=1)
     except Exception as e:
         _print_error("Unexpected Error", f"An unhandled error occurred: {str(e)}")
+        raise typer.Exit(code=1)
+
+@app.command()
+def init(
+    complete: bool = typer.Option(False, "--complete", "-c", help="Generate a complete example with advanced features."),
+    no_config: bool = typer.Option(False, "--no-config", "-n", help="Skip generation of .teraconfig.toml.")
+):
+    """
+    Initializes a new Tera project with boilerplate files.
+    """
+    target_dir = Path.cwd()
+    yaml_path = target_dir / "docs.yaml"
+
+    if yaml_path.exists():
+        typer.secho(f"⚠️  '{yaml_path.name}' already exists.", fg=typer.colors.YELLOW)
+        if not typer.confirm("Do you want to overwrite it?"):
+            typer.echo("Operation aborted.")
+            raise typer.Exit()
+
+    try:
+        service = InitService()
+        created_yaml, created_config = service.create_project(
+            target_dir=target_dir, 
+            complete_mode=complete, 
+            skip_config=no_config
+        )
+
+        typer.secho("\nProject initialized successfully!", fg=typer.colors.GREEN, bold=True)
+        typer.echo(f"   Created: {created_yaml.name}")
+        if created_config:
+            typer.echo(f"   Created: {created_config.name}")
+
+        typer.secho("\nNext steps:", fg=typer.colors.BLUE)
+        typer.echo("   1. Open docs.yaml and customize your API definition.")
+        typer.echo("   2. Run 'tera lint docs.yaml' to validate.")
+        typer.echo("   3. Run 'tera build' to generate OpenAPI specs.")
+        typer.echo("")
+
+    except Exception as e:
+        _print_error("Init Failed", str(e))
         raise typer.Exit(code=1)
 
 @app.command()

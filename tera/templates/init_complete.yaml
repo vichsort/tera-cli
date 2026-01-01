@@ -1,0 +1,74 @@
+# This is an automatically generated Tera template for initializing a standard OpenAPI specification.
+# You can customize this template according to your API requirements.
+# Use 'tera build' to validate and generate an JSON or different formats.
+# The documentation for Tera can be found at  -- TODO: https://tera.rs/docs/ -- 
+
+api:
+  name: "My Awesome API"
+  version: "1.0.0"
+  description: "A short introduction to My Awesome API."
+  base_url: "/v1"
+  auth:
+    type: "bearer" # Options: bearer, basic, apikey
+
+endpoints:
+  # e.g. Public Endpoint (No Auth)
+  - method: GET
+    path: /public/status
+    summary: System Status
+    auth_required: false
+    responses:
+      success:
+        status: 200
+        description: System operational
+        example: { "uptime": 99.9 }
+
+  # e.g. Complex endpoint (Auth, Params, Body)
+  - method: POST
+    path: /users/{id}
+    summary: Create User
+    description: Generates a profile, returns ID.
+    auth_required: true
+    
+    # Params (Path, Query, Header)
+    params:
+      path:
+        - name: id
+          type: integer
+          description: Numeric ID of the user
+      query:
+        - name: verbose
+          type: boolean
+          required: false
+          description: If true, returns detailed info
+      header:
+        - name: X-Request-ID
+          type: string
+          required: false
+          description: ID for tracking the request
+
+    # Payload
+    body:
+      - name: username
+        type: string
+        required: true
+        example: "johndoe"
+        min_length: 3
+      - name: email
+        type: string
+        required: true
+        example: "john@doe.com"
+
+    # Possible responses
+    responses:
+      success:
+        status: 201
+        description: User Created
+        example: { "id": 123, "username": "johndoe", "created_at": "2023-01-01" }
+      errors:
+        - status: 400
+          message: Bad Request
+          description: Invalid input data.
+        - status: 401
+          message: Unauthorized
+          description: Invalid or missing authentication.

@@ -1,0 +1,18 @@
+# This is an automatically generated Tera template for initializing a standard OpenAPI specification.
+# You can customize this template according to your API requirements.
+# Tera CLI Configuration File.
+# The documentation for Tera can be found at  -- TODO: https://tera.rs/docs/ -- 
+
+# Default import string for 'tera scan'
+# target = "app:app"
+
+# Default path to output generated for 'tera build'
+# output = "openapi.json"
+
+# API Title (overrides yaml if set)
+title = "My Project API"
+
+# Linter configuration
+[lint]
+# List of rules to ignore (Errors)
+# ignore = ["missing_description", "unsafe_write_operation"]

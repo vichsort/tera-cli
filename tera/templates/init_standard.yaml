@@ -1,0 +1,20 @@
+# This is an automatically generated Tera template for initializing a standard OpenAPI specification.
+# You can customize this template according to your API requirements.
+# Use 'tera build' to validate and generate an JSON or different formats.
+# The documentation for Tera can be found at  -- TODO: https://tera.rs/docs/ -- 
+
+api:
+  name: "My Awesome API"
+  version: "1.0.0"
+  description: "A short introduction to My Awesome API."
+
+endpoints:
+  - method: GET
+    path: /health
+    summary: Health Check
+    description: Verifies the API is running.
+    responses:
+      success:
+        status: 200
+        description: API is running
+        example: { "status": "ok" }
