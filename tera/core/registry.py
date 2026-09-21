@@ -384,6 +384,19 @@ def create_default_writer_registry() -> WriterRegistry:
     return registry
 
 
-default_driver_registry: DriverRegistry = create_default_driver_registry()
-default_writer_registry: WriterRegistry = create_default_writer_registry()
+def init_registries(config_path: Optional[Path] = None) -> Tuple[DriverRegistry, WriterRegistry]:
+    """
+    Initializes default registries and loads plugins from entry points and tera.toml.
+    """
+    driver_reg = create_default_driver_registry()
+    writer_reg = create_default_writer_registry()
+    from tera.core.plugins import load_plugins
+
+    load_plugins(driver_reg, writer_reg, config_path=config_path)
+    return driver_reg, writer_reg
+
+
+default_driver_registry: DriverRegistry
+default_writer_registry: WriterRegistry
+default_driver_registry, default_writer_registry = init_registries()
 

@@ -137,7 +137,7 @@ Executada em 3 etapas cirúrgicas para consolidar a escalabilidade do projeto:
 
 ## 6. Estado Atual de Validação e Qualidade
 
-- **Suíte de Testes**: 156 testes automatizados (unitários e de integração), 100% passando em ~1.5s.
+- **Suíte de Testes**: 162 testes automatizados (unitários e de integração), 100% passando em ~1.7s.
 - **Tipagem Estrita**: Pyright configurado no modo `strict` com 0 erros e 0 warnings.
 - **Clean Architecture**: Domínio desacoplado de frameworks de apresentação e infraestrutura externa.
 
@@ -165,7 +165,7 @@ Adoção do princípio *Batteries-Included, Extensible via Plugins* para preserv
 3. [x] **`HttpDriver`**: Ingestão de especificações remotas via HTTP/HTTPS com suporte a headers de autenticação.
 4. [x] **`PostmanCollectionDriver`**: Normalizer multi-versão suportando schemas v1.0, v2.0, v2.1 e v3.
 5. [x] **`HarDriver`**: Parser de arquivos `.har` com colapso heurístico de rotas dinâmicas (`/users/{id}`) e inferência de payload.
-6. [ ] **Sistema de Plugins via Entry Points (Tier 3)**: Descoberta dinâmica de extensões via grupo `tera.plugins`.
-7. [ ] **Suporte a Plugins Locais**: Carregamento de extensões locais declaradas no `tera.toml`.
+6. [x] **Sistema de Plugins via Entry Points (Tier 3)**: Descoberta dinâmica de extensões via grupo `tera.plugins`.
+7. [x] **Suporte a Plugins Locais**: Carregamento de extensões locais declaradas no `tera.toml`.
 8. [ ] **Pre-commit hook oficial**: Empacotar `tera lint` como hook do `pre-commit`.
 9. [ ] **GitHub Action oficial**: Criar action (`uses: vichsort/tera-action@v1`) para CI gates.

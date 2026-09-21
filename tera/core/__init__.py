@@ -5,7 +5,9 @@ from .registry import (
     WriterRegistry,
     default_driver_registry,
     default_writer_registry,
+    init_registries,
 )
+from .plugins import load_plugins, reset_plugins
 
 __all__ = [
     "get_driver",
@@ -15,4 +17,7 @@ __all__ = [
     "WriterRegistry",
     "default_driver_registry",
     "default_writer_registry",
+    "init_registries",
+    "load_plugins",
+    "reset_plugins",
 ]
