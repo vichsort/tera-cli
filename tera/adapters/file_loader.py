@@ -1,7 +1,7 @@
 import json
 import yaml
 from pathlib import Path
-from typing import Tuple, Optional, Dict, Any
+from typing import Tuple, Optional, Dict, Any, TextIO, cast
 from tera.domain.linting import LintIssue, LintSeverity
 
 class FileLoader:
@@ -11,7 +11,7 @@ class FileLoader:
     """   
     @staticmethod
     def load(path: Path) -> Tuple[Optional[Dict[str, Any]], list[LintIssue]]:
-        issues = []
+        issues: list[LintIssue] = []
         
         if not path.exists():
             issues.append(LintIssue(
@@ -37,19 +37,26 @@ class FileLoader:
             return None, issues
 
     @staticmethod
-    def _parse_yaml(stream) -> Tuple[Optional[Dict], list]:
+    def _parse_yaml(stream: TextIO) -> Tuple[Optional[Dict[str, Any]], list[LintIssue]]:
         try:
-            return yaml.safe_load(stream), []
+            raw_data: Any = yaml.safe_load(stream)
+            data: Optional[Dict[str, Any]] = cast(Optional[Dict[str, Any]], raw_data) if isinstance(raw_data, dict) else None
+            return data, []
         except yaml.YAMLError as e:
-            line = e.problem_mark.line + 1 if hasattr(e, 'problem_mark') else None
+            line: Optional[int] = None
+            mark: Any = getattr(e, 'problem_mark', None)
+            if mark is not None and hasattr(mark, 'line'):
+                line = int(mark.line) + 1
             return None, [LintIssue(
                 code="yaml_syntax", message=f"Invalid YAML: {e}", severity=LintSeverity.ERROR, line=line
             )]
 
     @staticmethod
-    def _parse_json(stream) -> Tuple[Optional[Dict], list]:
+    def _parse_json(stream: TextIO) -> Tuple[Optional[Dict[str, Any]], list[LintIssue]]:
         try:
-            return json.load(stream), []
+            raw_data: Any = json.load(stream)
+            data: Optional[Dict[str, Any]] = cast(Optional[Dict[str, Any]], raw_data) if isinstance(raw_data, dict) else None
+            return data, []
         except json.JSONDecodeError as e:
             return None, [LintIssue(
                 code="json_syntax", message=f"Invalid JSON: {e.msg}", severity=LintSeverity.ERROR, line=e.lineno

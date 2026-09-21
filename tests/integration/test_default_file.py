@@ -1,11 +1,12 @@
 import textwrap
-import os
+from pathlib import Path
+import pytest
 from typer.testing import CliRunner
 from tera.main import app
 
 runner = CliRunner()
 
-def test_build_uses_default_docs_yaml(tmp_path, monkeypatch):
+def test_build_uses_default_docs_yaml(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """
     Testa se rodar o comando sem argumentos busca o 'docs.yaml' na pasta atual.
     """

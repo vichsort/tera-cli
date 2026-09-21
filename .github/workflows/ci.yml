@@ -29,6 +29,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
 
+      - name: Run type checking (strict)
+        run: |
+          pyright
+
       - name: Run tests
         run: |
           pytest -v

@@ -24,7 +24,7 @@ class MarkdownWriter(TeraWriter):
         except Exception as e:
             raise FileNotFoundError(f"Template not found at {self.templates_dir}: {e}")
 
-        context = schema.dict()
+        context = schema.model_dump()
         markdown_content = template.render(**context)
 
         with open(self.output_path, "w", encoding="utf-8") as f:

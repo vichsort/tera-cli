@@ -1,3 +1,4 @@
+# pyright: reportPrivateUsage=false
 from pydantic import BaseModel
 from typing import List, Dict
 from tera.drivers.flask_driver import FlaskAppDriver
@@ -10,7 +11,7 @@ class SampleModel(BaseModel):
     tags: List[str]
     metadata: Dict[str, str]
 
-def test_extract_pydantic_fields_types():
+def test_extract_pydantic_fields_types() -> None:
     driver = FlaskAppDriver("dummy:app")
     fields = driver._extract_pydantic_fields(SampleModel)
     field_map = {f.name: f for f in fields}
@@ -33,7 +34,7 @@ def test_extract_pydantic_fields_types():
     assert field_map["metadata"].type == "object"
     assert field_map["metadata"].example == {}
 
-def test_map_type_hint_to_field_type():
+def test_map_type_hint_to_field_type() -> None:
     driver = FlaskAppDriver("dummy:app")
 
     assert driver._map_type_hint_to_field_type(int) == "integer"

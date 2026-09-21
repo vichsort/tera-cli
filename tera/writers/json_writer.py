@@ -6,7 +6,7 @@ from tera.adapters import TeraOpenApiAdapter
 class JsonFileWriter:
     """
     Concrete implementation of TeraWriter.
-    Recieves the Schema, converts to OpenAPI JSON and saves.
+    Receives the Schema, converts to OpenAPI JSON and saves.
     """
     def __init__(self, output_path: Path):
         self.output_path = output_path

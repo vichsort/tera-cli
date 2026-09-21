@@ -1,20 +1,11 @@
 import dataclasses
-from typing import Any, Dict
-try:
-    from pydantic import BaseModel
-    HAS_PYDANTIC = True
-except ImportError:
-    HAS_PYDANTIC = False
-    BaseModel = None
+from typing import Any, Dict, cast
+from pydantic import BaseModel
 
 def is_pydantic_model(type_hint: Any) -> bool:
     """
     Verifies if the type passed is a Pydantic class (BaseModel).
-    Safe to call even without Pydantic installed.
     """
-    if not HAS_PYDANTIC:
-        return False
-    
     if not isinstance(type_hint, type):
         return False
         
@@ -30,11 +21,15 @@ def get_pydantic_schema(model_class: Any) -> Dict[str, Any]:
 
     # Pydantic V2
     if hasattr(model_class, "model_json_schema"):
-        return model_class.model_json_schema()
+        schema = model_class.model_json_schema()
+        if isinstance(schema, dict):
+            return cast(Dict[str, Any], schema)
     
     # Pydantic V1
     if hasattr(model_class, "schema"):
-        return model_class.schema()
+        schema = model_class.schema()
+        if isinstance(schema, dict):
+            return cast(Dict[str, Any], schema)
 
     return {}
 

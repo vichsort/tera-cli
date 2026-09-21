@@ -1,5 +1,5 @@
 import pathspec
-from typing import List, Union
+from typing import List, Union, Optional
 from pathlib import Path
 
 DEFAULT_IGNORES = [
@@ -20,7 +20,7 @@ class PathFilter:
     Responsible for determining whether a file or directory should be ignored.
     Uses 'gitwildmatch' syntax (same as .gitignore).
     """
-    def __init__(self, user_patterns: List[str] = None):
+    def __init__(self, user_patterns: Optional[List[str]] = None):
         patterns = set(DEFAULT_IGNORES)
         if user_patterns:
             patterns.update(user_patterns)

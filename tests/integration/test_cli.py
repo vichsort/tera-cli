@@ -1,10 +1,11 @@
 import textwrap
+from pathlib import Path
 from typer.testing import CliRunner
 from tera.main import app
 
 runner = CliRunner()
 
-def test_build_command_happy_path(tmp_path):
+def test_build_command_happy_path(tmp_path: Path) -> None:
     """
     Cria um arquivo YAML temporário real, roda o build e verifica se o JSON nasceu.
     """
@@ -41,7 +42,7 @@ def test_build_command_happy_path(tmp_path):
     assert "Operation successful!" in result.output
     assert output_file.exists()
 
-def test_build_file_not_found():
+def test_build_file_not_found() -> None:
     """Testa se o sistema falha quando o arquivo não existe."""
     result = runner.invoke(app, ["build", "ghost_file.yaml"])
     

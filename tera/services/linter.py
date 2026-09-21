@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 from pydantic import ValidationError
 from tera.core import TeraConfig
 from tera.domain import TeraSchema
@@ -26,7 +26,7 @@ class LinterService:
             return issues
 
         try:
-            schema = TeraSchema(**raw_data)
+            schema = TeraSchema.model_validate(raw_data)
             for rule_function in ALL_RULES:
                 issues.extend(rule_function(schema))
         except Exception as e:
@@ -39,8 +39,8 @@ class LinterService:
         return self._filter_ignored(issues)
     
     def _filter_ignored(self, issues: List[LintIssue]) -> List[LintIssue]:
-        """Remove warinings that the user asked to ignore."""
-        filtered = []
+        """Remove warnings that the user asked to ignore."""
+        filtered: List[LintIssue] = []
         for issue in issues:
             if issue.severity == LintSeverity.ERROR:
                 filtered.append(issue)
@@ -49,10 +49,10 @@ class LinterService:
         
         return filtered
 
-    def _validate_structure(self, data: Dict) -> List[LintIssue]:
-        issues = []
+    def _validate_structure(self, data: Dict[str, Any]) -> List[LintIssue]:
+        issues: List[LintIssue] = []
         try:
-            TeraSchema(**data)
+            TeraSchema.model_validate(data)
         except ValidationError as e:
             for err in e.errors():
                 loc = " -> ".join(str(x) for x in err['loc'])

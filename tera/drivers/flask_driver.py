@@ -1,5 +1,5 @@
 import re
-from typing import Any, List, Set
+from typing import Any, List, Set, cast
 from tera.drivers.inspection import loader, parser, ast_parser, type_utils
 from tera.domain import (
     TeraSchema, 
@@ -12,6 +12,7 @@ from tera.domain import (
     ResponseSuccess,
     FieldType
 )
+from tera.domain.models import HTTPMethod
 
 class FlaskAppDriver:
     """
@@ -85,7 +86,7 @@ class FlaskAppDriver:
 
         return Endpoint(
             path=path_openapi,
-            method=method,
+            method=cast(HTTPMethod, method),
             summary=doc_info.summary,
             description=doc_info.description,
             auth_required=auth_required,
@@ -118,7 +119,7 @@ class FlaskAppDriver:
         required_fields = schema.get('required', [])
         
         valid_types = {'string', 'number', 'integer', 'boolean', 'array', 'object'}
-        fields = []
+        fields: List[BodyField] = []
         for name, props in properties.items():
             raw_type = props.get('type', 'string')
             prop_type: FieldType = raw_type if raw_type in valid_types else 'string'

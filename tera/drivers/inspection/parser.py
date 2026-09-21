@@ -9,10 +9,10 @@ class DocStringInfo:
 
 @dataclass
 class FunctionSignature:
-    parameters: Dict[str, Any] = field(default_factory=dict)
+    parameters: Dict[str, Any] = field(default_factory=dict[str, Any])
     has_kwargs: bool = False
 
-def parse_docstring(func: Callable) -> DocStringInfo:
+def parse_docstring(func: Callable[..., Any]) -> DocStringInfo:
     """
     Extract and cleans the function's docstring.
     Separates the first line (Summary) from the rest (Description).
@@ -33,7 +33,7 @@ def parse_docstring(func: Callable) -> DocStringInfo:
 
     return DocStringInfo(summary=summary, description=description)
 
-def parse_signature(func: Callable) -> FunctionSignature:
+def parse_signature(func: Callable[..., Any]) -> FunctionSignature:
     """
     Inspects the function signature to extract Type Hints.
     """
@@ -42,7 +42,7 @@ def parse_signature(func: Callable) -> FunctionSignature:
     except ValueError:
         return FunctionSignature()
 
-    params = {}
+    params: Dict[str, Any] = {}
     has_kwargs = False
 
     for name, param in sig.parameters.items():

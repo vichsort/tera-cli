@@ -42,9 +42,9 @@ class ApiConfig(BaseModel):
 class EndpointParams(BaseModel):
     model_config = ConfigDict(extra='forbid')
 
-    query: List[ParamField] = Field(default_factory=list)
-    path: List[ParamField] = Field(default_factory=list)
-    header: List[ParamField] = Field(default_factory=list)
+    query: List[ParamField] = Field(default_factory=list[ParamField])
+    path: List[ParamField] = Field(default_factory=list[ParamField])
+    header: List[ParamField] = Field(default_factory=list[ParamField])
 
 class ResponseSuccess(BaseModel):
     model_config = ConfigDict(extra='forbid')
@@ -65,7 +65,7 @@ class EndpointResponses(BaseModel):
     model_config = ConfigDict(extra='forbid')
 
     success: ResponseSuccess
-    errors: List[ResponseError] = Field(default_factory=list)
+    errors: List[ResponseError] = Field(default_factory=list[ResponseError])
 
 class Endpoint(BaseModel):
     model_config = ConfigDict(extra='forbid')
@@ -77,7 +77,7 @@ class Endpoint(BaseModel):
     description: Optional[str] = None
     auth_required: bool = False
     params: Optional[EndpointParams] = None
-    body: List[BodyField] = Field(default_factory=list)
+    body: List[BodyField] = Field(default_factory=list[BodyField])
     responses: EndpointResponses
 
 class TeraSchema(BaseModel):

@@ -1,32 +1,33 @@
 import typer
 import json
-from typing import Optional
+from typing import Optional, cast
 from pathlib import Path
 from pydantic import ValidationError
 from tera.core import factory, loader
+from tera.core.factory import WriterFormatStyle
 from tera.services import run_pipeline, InitService, LinterService
 from tera.exceptions import TeraError
-from tera.domain import LintSeverity
+from tera.domain import LintSeverity, LintIssue
 
 app = typer.Typer(help="Tera CLI - Documentation Converter")
 
-def _print_error(title: str, message: str):
+def _print_error(title: str, message: str) -> None:
     typer.secho(f"\n❌ {title}", fg=typer.colors.RED, bold=True)
     typer.secho(f"   {message}", fg=typer.colors.RED)
 
-def _print_success(input_ref: str, output_path: str):
+def _print_success(input_ref: str, output_path: str) -> None:
     typer.secho("\n✅ Operation successful!", fg=typer.colors.GREEN, bold=True)
     typer.echo(f"   Input:  {input_ref}")
     typer.echo(f"   Output: {output_path}\n")
 
-def _print_validation_error(e: ValidationError):
+def _print_validation_error(e: ValidationError) -> None:
     typer.secho(f"\n❌ Schema Validation Error:", fg=typer.colors.RED, bold=True)
     for err in e.errors():
         loc = " -> ".join([str(x) for x in err['loc']])
         msg = err['msg']
         typer.secho(f"   {loc}: {msg}", fg=typer.colors.YELLOW)
 
-def _print_human_lint_report(issues):
+def _print_human_lint_report(issues: list[LintIssue]) -> None:
     """Renders colored output for cli"""
     if not issues:
         return
@@ -52,12 +53,12 @@ def _print_human_lint_report(issues):
         typer.secho(meta, fg=typer.colors.BRIGHT_BLACK)
         typer.echo("")
 
-def _print_json_lint_report(issues):
+def _print_json_lint_report(issues: list[LintIssue]) -> None:
     """Renders output as JSON for cli"""
-    output = [issue.dict() for issue in issues]
+    output = [issue.model_dump() for issue in issues]
     typer.echo(json.dumps(output, indent=2))
 
-def _execute_pipeline(input_source: str, output_path: Path, format_style: str = 'tera'):
+def _execute_pipeline(input_source: str, output_path: Path, format_style: WriterFormatStyle = 'tera') -> None:
     """
     Helper function to execute the pipeline safely.
     Connects: Factory -> Pipeline -> UI
@@ -203,19 +204,22 @@ def export(
     """
     Export documentation to external formats (Markdown, HTML, Postman).
     """
+    valid_formats: dict[str, str] = {
+        'markdown': '.md',
+        'html': '.html',
+        'postman': '.json'
+    }
+    if format not in valid_formats:
+        _print_error("Invalid Format", f"Unknown format: '{format}'. Supported formats: markdown, html, postman.")
+        raise typer.Exit(code=1)
+
     typer.secho(f"Exporting to {format.upper()}...", fg=typer.colors.CYAN)
 
     if not output_file:
-        extension_map = {
-            'markdown': '.md',
-            'html': '.html',
-            'postman': '.json'
-        }
-
-        ext = extension_map.get(format, '.txt')
+        ext = valid_formats[format]
         output_file = input_file.with_suffix(ext)
 
-    _execute_pipeline(str(input_file), output_file, format_style=format)
+    _execute_pipeline(str(input_file), output_file, format_style=cast(WriterFormatStyle, format))
 
 @app.command()
 def lint(

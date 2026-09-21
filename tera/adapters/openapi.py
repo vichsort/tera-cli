@@ -1,4 +1,4 @@
-from typing import Any, Dict, List
+from typing import Any, Dict, List, cast
 import re
 from tera.domain import TeraSchema, Endpoint, ParamField, BodyField
 
@@ -47,12 +47,12 @@ class TeraOpenApiAdapter:
         return {}
 
     def _build_paths(self) -> Dict[str, Any]:
-        paths = {}
+        paths: Dict[str, Dict[str, Any]] = {}
         for ep in self.schema.endpoints:
-            path_item = paths.get(ep.path, {})
+            path_item: Dict[str, Any] = paths.get(ep.path, {})
             method_lower = ep.method.lower()
             
-            operation = {
+            operation: Dict[str, Any] = {
                 "summary": ep.summary,
                 "operationId": self._generate_operation_id(ep),
                 "tags": [ep.tag] if ep.tag else [],
@@ -83,23 +83,24 @@ class TeraOpenApiAdapter:
         return f"{ep.method.lower()}{camel_case}"
 
     def _build_parameters(self, ep: Endpoint) -> List[Dict[str, Any]]:
-        openapi_params = []
+        openapi_params: List[Dict[str, Any]] = []
         
         if not ep.params:
             return openapi_params
 
-        def add_params(fields: List[ParamField], location: str):
+        def add_params(fields: List[ParamField], location: str) -> None:
             for field in fields:
-                param = {
+                param_schema: Dict[str, Any] = self._infer_schema_recursive(field.example)
+                if field.min_length is not None:
+                    param_schema["minLength"] = field.min_length
+                
+                param: Dict[str, Any] = {
                     "name": field.name,
                     "in": location,
                     "required": field.required,
                     "description": field.description,
-                    "schema": self._infer_schema_recursive(field.example)
+                    "schema": param_schema
                 }
-                if field.min_length is not None:
-                    param["schema"]["minLength"] = field.min_length
-                
                 openapi_params.append(param)
 
         add_params(ep.params.path, "path")
@@ -109,9 +110,9 @@ class TeraOpenApiAdapter:
         return openapi_params
 
     def _build_request_body(self, body_fields: List[BodyField]) -> Dict[str, Any]:
-        properties = {}
-        required_fields = []
-        example_dict = {}
+        properties: Dict[str, Any] = {}
+        required_fields: List[str] = []
+        example_dict: Dict[str, Any] = {}
 
         for field in body_fields:
             properties[field.name] = self._infer_schema_recursive(field.example)
@@ -134,7 +135,7 @@ class TeraOpenApiAdapter:
         }
 
     def _build_responses(self, ep: Endpoint) -> Dict[str, Any]:
-        responses = {}
+        responses: Dict[str, Any] = {}
         
         success_schema = self._infer_schema_recursive(ep.responses.success.example)
         responses[str(ep.responses.success.status)] = {
@@ -181,13 +182,15 @@ class TeraOpenApiAdapter:
             return {"type": "number"}
 
         if isinstance(value, dict):
-            properties = {k: self._infer_schema_recursive(v) for k, v in value.items()}
+            raw_dict = cast(Dict[Any, Any], value)
+            properties: Dict[str, Any] = {str(k): self._infer_schema_recursive(v) for k, v in raw_dict.items()}
             return {"type": "object", "properties": properties}
 
         if isinstance(value, list):
-            if not value:
+            raw_list = cast(List[Any], value)
+            if not raw_list:
                 return {"type": "array", "items": {}}
-            item_schema = self._infer_schema_recursive(value[0])
+            item_schema = self._infer_schema_recursive(raw_list[0])
             return {"type": "array", "items": item_schema}
 
         return {"type": "string"}

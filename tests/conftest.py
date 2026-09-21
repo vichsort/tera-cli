@@ -1,15 +1,15 @@
 import pytest
-from tera.domain.models import TeraSchema, Endpoint, ResponseSuccess, EndpointResponses
+from tera.domain.models import TeraSchema, Endpoint, ResponseSuccess, EndpointResponses, ApiConfig, AuthConfig
 
 @pytest.fixture
-def minimal_schema_model():
+def minimal_schema_model() -> TeraSchema:
     """Retorna um objeto TeraSchema válido e minimalista para testes unitários."""
     return TeraSchema(
-        api={
-            "name": "Test API", 
-            "version": "1.0",
-            "auth": {"type": "bearer"}
-        },
+        api=ApiConfig(
+            name="Test API", 
+            version="1.0",
+            auth=AuthConfig(type="bearer")
+        ),
         endpoints=[
             Endpoint(
                 path="/test",
@@ -18,7 +18,7 @@ def minimal_schema_model():
                 responses=EndpointResponses(
                     success=ResponseSuccess(
                         status=200,
-                        example={"msg": "ok"} # Exemplo simples
+                        example={"msg": "ok"}
                     )
                 )
             )

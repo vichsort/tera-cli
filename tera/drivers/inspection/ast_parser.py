@@ -3,7 +3,7 @@ import inspect
 import textwrap
 from typing import List, Callable, Any
 
-def get_decorators(func: Callable) -> List[str]:
+def get_decorators(func: Callable[..., Any]) -> List[str]:
     """
     Analises the code and returns an list with the names
     of decorators applied to it.
@@ -24,7 +24,7 @@ def get_decorators(func: Callable) -> List[str]:
     except (OSError, TypeError, SyntaxError):
         return []
 
-    decorators = []
+    decorators: List[str] = []
 
     for node in ast.walk(tree):
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):

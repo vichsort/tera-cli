@@ -1,9 +1,9 @@
-from typing import List
+from typing import List, Callable
 from tera.domain import TeraSchema
 from tera.domain.linting import LintIssue, LintSeverity
 
 def check_general_info(schema: TeraSchema) -> List[LintIssue]:
-    issues = []
+    issues: List[LintIssue] = []
     if not schema.api.description:
         issues.append(LintIssue(
             code="missing_api_description",
@@ -14,7 +14,7 @@ def check_general_info(schema: TeraSchema) -> List[LintIssue]:
     return issues
 
 def check_endpoints(schema: TeraSchema) -> List[LintIssue]:
-    issues = []
+    issues: List[LintIssue] = []
     write_methods = ['POST', 'PUT', 'DELETE', 'PATCH']
     
     for ep in schema.endpoints:
@@ -49,4 +49,5 @@ def check_endpoints(schema: TeraSchema) -> List[LintIssue]:
 
     return issues
 
-ALL_RULES = [check_general_info, check_endpoints]
+RuleFunction = Callable[[TeraSchema], List[LintIssue]]
+ALL_RULES: List[RuleFunction] = [check_general_info, check_endpoints]
