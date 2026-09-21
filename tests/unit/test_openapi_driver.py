@@ -258,3 +258,4 @@ def test_openapi_driver_invalid_syntax(tmp_path: Path) -> None:
     driver = OpenApiDriver(bad_file)
     with pytest.raises(TeraError):
         driver.load()
+

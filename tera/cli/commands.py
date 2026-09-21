@@ -16,7 +16,9 @@ from tera.services import (
     SyncService,
     CoverageService,
     SecurityDriftService,
-    run_server
+    run_server,
+    GraphService,
+    AuditService
 )
 from tera.exceptions import TeraError
 from tera.domain import LintSeverity, LintIssue, SchemaDiff, SemverResult
@@ -905,3 +907,146 @@ def serve(
         raise typer.Exit(code=1)
     finally:
         typer.secho("\nServer stopped.", fg=typer.colors.GREEN)
+
+@app.command()
+def graph(
+    doc_file: Path = typer.Argument(
+        Path("docs.yaml"),
+        help="Path to the documentation file to visualize. Default: docs.yaml"
+    ),
+    output: Optional[Path] = typer.Option(
+        None,
+        "--output", "-o",
+        help="Path to save the generated Mermaid diagram (e.g. graph.mmd or graph.md)."
+    ),
+    direction: str = typer.Option(
+        "TD",
+        "--direction",
+        help="Graph direction: 'TD' (Top-Down) or 'LR' (Left-to-Right). Default: TD"
+    ),
+    to_json: bool = typer.Option(
+        False,
+        "--json", "-j",
+        help="Output graph structure as JSON."
+    )
+) -> None:
+    """
+    Generates a Mermaid dependency and architectural relationship graph from API endpoints.
+    """
+    try:
+        schema = load_schema_from_source(doc_file)
+    except FileNotFoundError as e:
+        _print_error("Doc File Not Found", str(e))
+        raise typer.Exit(code=1)
+    except Exception as e:
+        _print_error("Error Loading Doc File", str(e))
+        raise typer.Exit(code=1)
+
+    dir_choice = direction.upper().strip()
+    if dir_choice not in ("TD", "LR"):
+        _print_error("Invalid Direction", "Option --direction must be either 'TD' or 'LR'.")
+        raise typer.Exit(code=1)
+
+    service = GraphService()
+    api_graph = service.build_graph(schema)
+
+    if to_json:
+        typer.echo(json.dumps(api_graph.model_dump(), indent=2))
+        return
+
+    mermaid_code = api_graph.to_mermaid(direction=dir_choice)
+
+    if output:
+        try:
+            if output.suffix.lower() == ".md":
+                wrapped = f"```mermaid\n{mermaid_code}\n```\n"
+                output.write_text(wrapped, encoding="utf-8")
+            else:
+                output.write_text(mermaid_code + "\n", encoding="utf-8")
+            typer.secho(
+                f"✅ Mermaid graph saved to '{output}' ({len(api_graph.nodes)} nodes, {len(api_graph.edges)} edges).\n",
+                fg=typer.colors.GREEN,
+                bold=True
+            )
+        except Exception as e:
+            _print_error("Write Failed", f"Could not write to '{output}': {e}")
+            raise typer.Exit(code=1)
+    else:
+        typer.echo(mermaid_code)
+
+@app.command()
+def audit(
+    doc_file: Path = typer.Argument(
+        Path("docs.yaml"),
+        help="Path to the documentation file to audit. Default: docs.yaml"
+    ),
+    strict: bool = typer.Option(
+        False,
+        "--strict",
+        help="Exit with code 1 if any CRITICAL or WARNING inconsistency is detected."
+    ),
+    min_score: float = typer.Option(
+        0.0,
+        "--min-score",
+        help="Minimum semantic coherence score (0-100) required to pass CI."
+    ),
+    to_json: bool = typer.Option(
+        False,
+        "--json", "-j",
+        help="Output audit report as JSON."
+    )
+) -> None:
+    """
+    Audits semantic and structural consistency without LLMs (verb vs summary, status codes, path plurality, and public mutations).
+    """
+    try:
+        schema = load_schema_from_source(doc_file)
+    except FileNotFoundError as e:
+        _print_error("Doc File Not Found", str(e))
+        raise typer.Exit(code=1)
+    except Exception as e:
+        _print_error("Error Loading Doc File", str(e))
+        raise typer.Exit(code=1)
+
+    service = AuditService()
+    report = service.audit(schema)
+
+    if to_json:
+        typer.echo(json.dumps(report.model_dump(), indent=2))
+    else:
+        typer.echo("")
+        typer.secho("🔎 Semantic & Structural Consistency Audit", fg=typer.colors.BLUE, bold=True)
+        typer.echo(f"  Specification:    {doc_file}")
+        typer.echo(f"  Total Endpoints:  {report.total_endpoints}")
+        score_color = typer.colors.GREEN if report.coherence_score >= 80 else (typer.colors.YELLOW if report.coherence_score >= 60 else typer.colors.RED)
+        typer.secho(f"  Coherence Score:  {report.coherence_score}%", fg=score_color, bold=True)
+        typer.echo("")
+
+        if not report.has_issues:
+            typer.secho("  ✅ No inconsistencies detected. API contracts are semantically coherent.\n", fg=typer.colors.GREEN, bold=True)
+        else:
+            for issue in report.issues:
+                color = typer.colors.RED if issue.severity == "CRITICAL" else (typer.colors.YELLOW if issue.severity == "WARNING" else typer.colors.BLUE)
+                typer.secho(f"  [{issue.severity}] [{issue.code}] {issue.method} {issue.path}", fg=color, bold=True)
+                typer.secho(f"     {issue.message}", fg=typer.colors.BRIGHT_BLACK)
+                if issue.suggestion:
+                    typer.secho(f"     👉 Suggestion: {issue.suggestion}", fg=typer.colors.CYAN)
+
+            typer.echo("")
+            summary_color = typer.colors.RED if report.critical_count > 0 else (typer.colors.YELLOW if report.warning_count > 0 else typer.colors.BLUE)
+            typer.secho(
+                f"Summary: {report.critical_count} critical, {report.warning_count} warning(s), {report.info_count} info ({report.total_issues} total issue(s))\n",
+                fg=summary_color,
+                bold=True
+            )
+
+    failed = False
+    if strict and (report.critical_count > 0 or report.warning_count > 0):
+        typer.secho("❌ Audit failed in strict mode: inconsistencies detected.\n", fg=typer.colors.RED, bold=True)
+        failed = True
+    elif report.coherence_score < min_score:
+        typer.secho(f"❌ Audit failed: Coherence score {report.coherence_score}% is below threshold {min_score}%.\n", fg=typer.colors.RED, bold=True)
+        failed = True
+
+    if failed:
+        raise typer.Exit(code=1)

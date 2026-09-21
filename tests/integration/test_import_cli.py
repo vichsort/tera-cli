@@ -86,3 +86,4 @@ def test_cli_import_file_not_found() -> None:
     result = runner.invoke(app, ["import", "non_existent_openapi.json"])
     assert result.exit_code == 1
     assert "does not exist" in result.output
+

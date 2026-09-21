@@ -9,6 +9,8 @@ from .sync import SyncService
 from .coverage import CoverageService
 from .security import SecurityDriftService
 from .server import DocServer, SpecState, run_server
+from .graph import GraphService
+from .audit import AuditService
 
 __all__ = [
     "run_pipeline", 
@@ -24,4 +26,6 @@ __all__ = [
     "DocServer",
     "SpecState",
     "run_server",
+    "GraphService",
+    "AuditService",
 ]

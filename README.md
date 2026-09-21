@@ -252,6 +252,43 @@ tera serve docs.yaml --port 8080 --ui redoc --open
 #   http://127.0.0.1:8000/openapi.yaml
 ```
 
+### 14. `graph`
+
+Generates architectural relationship and dependency diagrams across API endpoints in Mermaid syntax (`flowchart TD / LR`), grouping resources by tags and identifying creation/lifecycle dependencies (`creates {id}`) and sub-resources.
+
+```bash
+# Output Mermaid diagram to stdout
+tera graph docs.yaml
+
+# Save diagram directly to a .mmd or .md file
+tera graph docs.yaml -o architecture.mmd
+tera graph docs.yaml -o architecture.md
+
+# Change layout direction to Left-to-Right
+tera graph docs.yaml --direction LR
+
+# Output graph nodes and edges as JSON
+tera graph docs.yaml --json
+```
+
+### 15. `audit`
+
+Performs deterministic semantic and structural inconsistency audits without external LLMs. Identifies semantic mismatches across HTTP methods, status codes, path pluralities, and unprotected destructive operations.
+
+```bash
+# Run consistency audit
+tera audit docs.yaml
+
+# Fail in CI if any critical or warning inconsistency is detected
+tera audit docs.yaml --strict
+
+# Enforce a minimum semantic coherence score (0-100)
+tera audit docs.yaml --min-score 90
+
+# Output report as JSON for CI/CD integration
+tera audit docs.yaml --json
+```
+
 ---
 
 ## Configuration

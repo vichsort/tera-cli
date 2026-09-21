@@ -102,3 +102,4 @@ def test_doc_server_http_endpoints(tmp_path: Path) -> None:
         server.shutdown()
         server.server_close()
         server_thread.join(timeout=2.0)
+

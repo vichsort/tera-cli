@@ -35,6 +35,8 @@ from .changelog import ChangelogSection
 from .sync import SyncResult
 from .coverage import EndpointCoverage, CoverageReport
 from .security import DriftType, SecuritySeverity, SecurityIssue, SecurityDriftReport
+from .graph import GraphNode, GraphEdge, ApiGraph
+from .audit import AuditSeverity, AuditIssue, AuditReport
 
 __all__ = [
     "TeraSchema",
@@ -66,4 +68,10 @@ __all__ = [
     "SecuritySeverity",
     "SecurityIssue",
     "SecurityDriftReport",
+    "GraphNode",
+    "GraphEdge",
+    "ApiGraph",
+    "AuditSeverity",
+    "AuditIssue",
+    "AuditReport",
 ]

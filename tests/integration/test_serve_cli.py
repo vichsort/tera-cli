@@ -46,3 +46,4 @@ def test_cli_serve_invokes_run_server(tmp_path: Path, monkeypatch: pytest.Monkey
     assert called_args["port"] == 9090
     assert called_args["ui"] == "redoc"
     assert called_args["open_browser"] is True
+
