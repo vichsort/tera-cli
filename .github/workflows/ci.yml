@@ -37,3 +37,17 @@ jobs:
         run: |
           pytest -v
 
+      - name: Test composite action (lint)
+        if: matrix.python-version == '3.12'
+        uses: ./
+        with:
+          command: lint
+          file: docs.yaml
+
+      - name: Test composite action (audit)
+        if: matrix.python-version == '3.12'
+        uses: ./
+        with:
+          command: audit
+          file: docs.yaml
+

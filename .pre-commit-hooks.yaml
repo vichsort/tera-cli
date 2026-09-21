@@ -1,0 +1,15 @@
+- id: tera-lint
+  name: tera lint
+  description: Validate and lint API specifications with tera-cli
+  entry: tera lint
+  language: python
+  types: [yaml]
+  files: ^docs\.yaml$
+
+- id: tera-audit
+  name: tera audit
+  description: Audit API specifications for semantic and structural inconsistencies
+  entry: tera audit
+  language: python
+  types: [yaml]
+  files: ^docs\.yaml$

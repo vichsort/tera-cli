@@ -1,0 +1,47 @@
+name: "Tera CLI Action"
+description: "Run tera-cli checks (lint, audit, diff, coverage) in CI/CD workflows"
+author: "Vitor Mignoni"
+branding:
+  icon: "check-circle"
+  color: "blue"
+
+inputs:
+  command:
+    description: "The tera command to execute (e.g., lint, audit, diff, coverage, build)"
+    required: false
+    default: "lint"
+  file:
+    description: "Target specification file (e.g., docs.yaml)"
+    required: false
+    default: "docs.yaml"
+  args:
+    description: "Additional command line arguments (e.g., --strict, --fail-on-breaking, --min-coverage 80)"
+    required: false
+    default: ""
+  python-version:
+    description: "Python version to use"
+    required: false
+    default: "3.12"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install tera-cli
+      shell: bash
+      run: |
+        python -m pip install --upgrade pip
+        pip install "${{ github.action_path }}"
+
+    - name: Run tera command
+      shell: bash
+      run: |
+        if [ -n "${{ inputs.file }}" ]; then
+          tera ${{ inputs.command }} ${{ inputs.file }} ${{ inputs.args }}
+        else
+          tera ${{ inputs.command }} ${{ inputs.args }}
+        fi
