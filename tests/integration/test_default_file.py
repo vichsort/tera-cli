@@ -5,35 +5,35 @@ from tera.main import app
 
 runner = CliRunner()
 
-def test_build_uses_default_docs_yaml():
+def test_build_uses_default_docs_yaml(tmp_path, monkeypatch):
     """
     Testa se rodar o comando sem argumentos busca o 'docs.yaml' na pasta atual.
     """
-    with runner.isolated_filesystem():
-        with open("docs.yaml", "w", encoding="utf-8") as f:
-            f.write(textwrap.dedent("""
-            api:
-              name: Default Test
-              version: "1.0"
-            endpoints:
-              - path: /
-                method: GET
-                summary: Home
-                responses:
-                  success:
-                    example: { "ok": true }
-            """))
+    monkeypatch.chdir(tmp_path)
+    docs_file = tmp_path / "docs.yaml"
+    docs_file.write_text(textwrap.dedent("""
+    api:
+      name: Default Test
+      version: "1.0"
+    endpoints:
+      - path: /
+        method: GET
+        summary: Home
+        responses:
+          success:
+            example: { "ok": true }
+    """), encoding="utf-8")
 
-        result = runner.invoke(app, []) 
+    result = runner.invoke(app, ["build"]) 
 
-        if result.exit_code != 0:
-            print("\n--- TYPER ERROR OUTPUT ---")
-            print(result.output)
-            print("--------------------------")
+    if result.exit_code != 0:
+        print("\n--- TYPER ERROR OUTPUT ---")
+        print(result.output)
+        print("--------------------------")
 
-        assert result.exit_code == 0, "Command failed using default docs.yaml"
+    assert result.exit_code == 0, "Command failed using default docs.yaml"
 
-        assert "docs.yaml" in result.output
-        assert "Build successful" in result.output
+    assert "docs.yaml" in result.output
+    assert "Operation successful" in result.output
 
-        assert os.path.exists("docs.json")
+    assert (tmp_path / "docs.json").exists()

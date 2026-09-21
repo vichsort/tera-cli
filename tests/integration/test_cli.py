@@ -30,7 +30,7 @@ def test_build_command_happy_path(tmp_path):
     
     input_file.write_text(input_content, encoding="utf-8")
 
-    result = runner.invoke(app, [str(input_file), "-o", str(output_file)])
+    result = runner.invoke(app, ["build", str(input_file), "-o", str(output_file)])
 
     if result.exit_code != 0:
         print("\n--- DEBUG TYPER OUTPUT ---")
@@ -38,12 +38,12 @@ def test_build_command_happy_path(tmp_path):
         print("--------------------------")
 
     assert result.exit_code == 0
-    assert "✅ Build successful!" in result.output
+    assert "Operation successful!" in result.output
     assert output_file.exists()
 
 def test_build_file_not_found():
     """Testa se o sistema falha quando o arquivo não existe."""
-    result = runner.invoke(app, ["ghost_file.yaml"])
+    result = runner.invoke(app, ["build", "ghost_file.yaml"])
     
     assert result.exit_code != 0
 
