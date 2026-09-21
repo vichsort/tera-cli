@@ -28,3 +28,4 @@ class SecurityDriftReport(BaseModel):
     critical_count: int
     warning_count: int
     issues: List[SecurityIssue] = Field(default_factory=list[SecurityIssue])
+

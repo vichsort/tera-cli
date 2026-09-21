@@ -15,7 +15,8 @@ from tera.services import (
     ChangelogService,
     SyncService,
     CoverageService,
-    SecurityDriftService
+    SecurityDriftService,
+    run_server
 )
 from tera.exceptions import TeraError
 from tera.domain import LintSeverity, LintIssue, SchemaDiff, SemverResult
@@ -777,3 +778,130 @@ def security(
 
     if fail_on_drift and report.has_drift:
         raise typer.Exit(code=1)
+
+@app.command("import")
+def import_spec(
+    spec_file: Path = typer.Argument(
+        ...,
+        help="Path to the OpenAPI (3.0/3.1) or Swagger (2.0) file (.json or .yaml) to import."
+    ),
+    output: Path = typer.Option(
+        Path("docs.yaml"),
+        "--output", "-o",
+        help="Destination path for the canonical Tera documentation file. Default: docs.yaml"
+    ),
+    force: bool = typer.Option(
+        False,
+        "--force", "-f",
+        help="Overwrite output file if it already exists."
+    ),
+    to_json: bool = typer.Option(
+        False,
+        "--json", "-j",
+        help="Output imported schema as JSON to stdout instead of saving to file."
+    )
+) -> None:
+    """
+    Imports an existing OpenAPI/Swagger specification (JSON or YAML) into the canonical Tera IR (docs.yaml).
+    """
+    if not spec_file.exists():
+        _print_error("File Not Found", f"OpenAPI specification '{spec_file}' does not exist.")
+        raise typer.Exit(code=1)
+
+    try:
+        driver = factory.get_driver(spec_file, driver_type="openapi")
+        schema = driver.load()
+    except TeraError as e:
+        _print_error(e.title, e.message)
+        raise typer.Exit(code=1)
+    except Exception as e:
+        _print_error("Import Failed", f"Could not parse OpenAPI specification: {e}")
+        raise typer.Exit(code=1)
+
+    if to_json:
+        typer.echo(json.dumps(schema.model_dump(), indent=2))
+        return
+
+    if output.exists() and not force:
+        _print_error(
+            "File Exists",
+            f"The destination file '{output}' already exists. Use --force / -f to overwrite."
+        )
+        raise typer.Exit(code=1)
+
+    try:
+        writer = factory.get_writer(output, format_style="tera")
+        writer.write(schema)
+        _print_success(str(spec_file), str(output))
+        typer.secho(
+            f"Imported {len(schema.endpoints)} endpoints for '{schema.api.name}' (v{schema.api.version}).\n",
+            fg=typer.colors.GREEN
+        )
+    except Exception as e:
+        _print_error("Write Failed", f"Could not write to '{output}': {e}")
+        raise typer.Exit(code=1)
+
+@app.command()
+def serve(
+    doc_file: Path = typer.Argument(
+        Path("docs.yaml"),
+        help="Path to the documentation file to serve. Default: docs.yaml"
+    ),
+    port: int = typer.Option(
+        8000,
+        "--port", "-p",
+        help="Port to run the HTTP documentation server on. Default: 8000"
+    ),
+    host: str = typer.Option(
+        "127.0.0.1",
+        "--host", "-h",
+        help="Host address to bind to. Default: 127.0.0.1"
+    ),
+    ui: str = typer.Option(
+        "swagger",
+        "--ui",
+        help="Default interface: 'swagger' or 'redoc'. Default: swagger"
+    ),
+    open_browser: bool = typer.Option(
+        False,
+        "--open", "-b",
+        help="Automatically open the documentation in the default web browser."
+    )
+) -> None:
+    """
+    Serves interactive API documentation (Swagger UI / Redoc) locally with live reloading.
+    """
+    if not doc_file.exists():
+        _print_error("File Not Found", f"Documentation file '{doc_file}' does not exist.")
+        raise typer.Exit(code=1)
+
+    ui_choice = ui.lower().strip()
+    if ui_choice not in ("swagger", "redoc"):
+        _print_error("Invalid UI", "Option --ui must be either 'swagger' or 'redoc'.")
+        raise typer.Exit(code=1)
+
+    typer.echo("")
+    typer.secho("🚀 Tera Documentation Server", fg=typer.colors.BLUE, bold=True)
+    typer.echo(f"  Documentation: {doc_file}")
+    typer.echo(f"  Server URL:    http://{host}:{port}/")
+    typer.echo(f"  Swagger UI:    http://{host}:{port}/swagger")
+    typer.echo(f"  Redoc UI:      http://{host}:{port}/redoc")
+    typer.echo(f"  OpenAPI Spec:  http://{host}:{port}/openapi.json")
+    typer.secho("\n  Watching for changes in documentation file... (Live refresh on browser reload)", fg=typer.colors.BRIGHT_BLACK)
+    typer.secho("  Press Ctrl+C to stop.\n", fg=typer.colors.YELLOW)
+
+    try:
+        run_server(
+            file_path=doc_file,
+            host=host,
+            port=port,
+            ui=ui_choice,
+            open_browser=open_browser,
+        )
+    except KeyboardInterrupt:
+        pass
+    except Exception as e:
+        _print_error("Server Error", str(e))
+        raise typer.Exit(code=1)
+    finally:
+        typer.secho("\nServer stopped.", fg=typer.colors.GREEN)

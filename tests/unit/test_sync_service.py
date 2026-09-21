@@ -110,3 +110,4 @@ def test_sync_prune_orphaned_endpoints(doc_spec: TeraSchema, code_spec: TeraSche
 
     assert any("/legacy" in ep for ep in result.endpoints_pruned)
     assert not any(ep.path == "/legacy" for ep in result.merged_schema.endpoints)
+

@@ -80,3 +80,4 @@ class SecurityDriftService:
             warning_count=warning_count,
             issues=issues
         )
+

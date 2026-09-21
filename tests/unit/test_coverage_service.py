@@ -86,3 +86,4 @@ def test_coverage_empty_schema() -> None:
 
     assert report.total_endpoints == 0
     assert report.overall_score == 100.0
+

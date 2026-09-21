@@ -1,7 +1,7 @@
 from pathlib import Path
-from typing import Union, Literal
+from typing import Union, Literal, Optional
 from tera.contracts import TeraDriver, TeraWriter
-from tera.drivers import YamlFileDriver, FlaskAppDriver
+from tera.drivers import YamlFileDriver, FlaskAppDriver, OpenApiDriver
 from tera.writers import (
     JsonFileWriter, 
     YamlFileWriter, 
@@ -12,22 +12,44 @@ from tera.writers import (
     PostmanWriter
 )
 
-def get_driver(source: Union[str, Path]) -> TeraDriver:
+DriverType = Literal['tera', 'openapi', 'flask']
+
+def get_driver(source: Union[str, Path], driver_type: Optional[DriverType] = None) -> TeraDriver:
     """
     Factory Method for input drivers.
-    Decides which driver to instantiate based on the input string format.
+    Decides which driver to instantiate based on input format or explicit driver_type.
     """
+    if driver_type == 'openapi':
+        return OpenApiDriver(Path(source))
+    if driver_type == 'flask':
+        return FlaskAppDriver(str(source))
+    if driver_type == 'tera':
+        return YamlFileDriver(Path(source))
+
     source_str = str(source)
-    
+    if ":" in source_str and not Path(source_str).exists():
+        return FlaskAppDriver(source_str)
+
+    path = Path(source_str)
+    if path.exists() and path.suffix.lower() in ('.json', '.yaml', '.yml'):
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                header = f.read(512)
+                if (
+                    '"openapi"' in header or "'openapi'" in header or 'openapi:' in header or
+                    '"swagger"' in header or "'swagger'" in header or 'swagger:' in header
+                ):
+                    return OpenApiDriver(path)
+        except Exception:
+            pass
+        return YamlFileDriver(path)
+
     if source_str.endswith(('.yaml', '.yml')):
         return YamlFileDriver(Path(source_str))
 
-    if ":" in source_str:
-        return FlaskAppDriver(source_str)
-        
     raise ValueError(
         f"Could not determine driver for input: '{source}'. "
-        "Supported formats: .yaml files or 'module:app' strings."
+        "Supported formats: .yaml/.json files or 'module:app' strings."
     )
 
 WriterFormatStyle = Literal['tera', 'openapi', 'markdown', 'html', 'postman']

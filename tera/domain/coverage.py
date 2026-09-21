@@ -34,3 +34,4 @@ class CoverageReport(BaseModel):
     errors_score: float
     endpoints: List[EndpointCoverage] = Field(default_factory=list[EndpointCoverage])
     summary_stats: Dict[str, float] = Field(default_factory=dict[str, float])
+

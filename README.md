@@ -218,6 +218,40 @@ tera security main:app --doc docs.yaml --fail-on-drift
 tera security main:app --doc docs.yaml --json
 ```
 
+### 12. `import`
+
+Imports existing OpenAPI (3.0/3.1) or Swagger (2.0) specifications (JSON or YAML) into the canonical Tera IR (`docs.yaml`). Resolves internal `$ref` components and maps parameters, schemas, and responses.
+
+```bash
+# Import an existing OpenAPI specification into docs.yaml
+tera import openapi.json -o docs.yaml
+
+# Overwrite existing destination file
+tera import swagger.yaml -o docs.yaml --force
+
+# Inspect converted Tera IR as JSON to stdout
+tera import openapi.json --json
+```
+
+### 13. `serve`
+
+Serves interactive documentation locally with zero extra dependencies using Python's built-in HTTP server. Embeds Swagger UI or Redoc and watches `docs.yaml` for changes, reloading the specification on browser refresh.
+
+```bash
+# Serve Swagger UI locally on http://127.0.0.1:8000
+tera serve docs.yaml
+
+# Serve Redoc UI on a custom port and automatically open the browser
+tera serve docs.yaml --port 8080 --ui redoc --open
+
+# Direct endpoints available:
+#   http://127.0.0.1:8000/          (Default UI)
+#   http://127.0.0.1:8000/swagger   (Swagger UI)
+#   http://127.0.0.1:8000/redoc     (Redoc UI)
+#   http://127.0.0.1:8000/openapi.json
+#   http://127.0.0.1:8000/openapi.yaml
+```
+
 ---
 
 ## Configuration

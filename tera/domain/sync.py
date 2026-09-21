@@ -14,3 +14,4 @@ class SyncResult(BaseModel):
     endpoints_orphaned: List[str] = Field(default_factory=list[str])
     endpoints_pruned: List[str] = Field(default_factory=list[str])
     annotations_preserved: int = 0
+

@@ -109,3 +109,4 @@ def test_security_undocumented_secure_endpoint(clean_doc: TeraSchema, matching_c
     issue = next(i for i in report.issues if i.path == "/admin")
     assert issue.drift_type == "undocumented_endpoint"
     assert issue.severity == "WARNING"
+

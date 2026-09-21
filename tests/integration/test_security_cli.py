@@ -116,3 +116,4 @@ def test_cli_security_json(security_test_env: tuple[str, Path, Path]) -> None:
     assert data["has_drift"] is True
     assert data["critical_count"] == 2
     assert len(data["issues"]) == 2
+

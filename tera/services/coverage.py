@@ -143,3 +143,4 @@ class CoverageService:
             score=round(score, 1),
             missing_items=missing
         )
+

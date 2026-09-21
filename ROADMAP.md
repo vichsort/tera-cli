@@ -148,6 +148,7 @@ Pesquisado e confirmado durante a sessão:
 2. [x] `tera diff` (motor central) — comparação semântica entre versões, classificação de breaking changes e suporte a CI (`--fail-on-breaking`, `--fail-on-drift`).
 3. [x] A partir do diff: `tera changelog` (concluído), `tera semver` (concluído), `tera sync` (self-healing concluído).
 4. [x] Features independentes: `tera security` (detector de drift concluído), `tera coverage` (auditoria de completude concluída).
+5. [x] Entrada & Visualização (Etapa 1): `tera import` (OpenApiDriver concluído), `tera serve` (servidor HTTP local Swagger UI/Redoc concluído).
 
 ---
 

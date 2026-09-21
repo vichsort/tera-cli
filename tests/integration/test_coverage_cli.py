@@ -79,3 +79,4 @@ def test_cli_coverage_min_threshold_fails(tmp_path: Path) -> None:
     result = runner.invoke(app, ["coverage", str(doc), "--min-coverage", "80"])
     assert result.exit_code == 1
     assert "Coverage check failed" in result.stdout
+

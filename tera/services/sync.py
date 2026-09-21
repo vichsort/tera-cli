@@ -191,3 +191,4 @@ class SyncService:
             merged_fields.append(field)
 
         return merged_fields, preserved_count
+

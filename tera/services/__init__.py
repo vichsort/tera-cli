@@ -8,6 +8,7 @@ from .changelog import ChangelogService
 from .sync import SyncService
 from .coverage import CoverageService
 from .security import SecurityDriftService
+from .server import DocServer, SpecState, run_server
 
 __all__ = [
     "run_pipeline", 
@@ -19,5 +20,8 @@ __all__ = [
     "ChangelogService",
     "SyncService",
     "CoverageService",
-    "SecurityDriftService"
+    "SecurityDriftService",
+    "DocServer",
+    "SpecState",
+    "run_server",
 ]
