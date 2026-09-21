@@ -26,6 +26,11 @@ from .diff import (
     SchemaDiff
 )
 
+from .semver import (
+    SemverBump,
+    SemverResult
+)
+
 __all__ = [
     "TeraSchema",
     "Endpoint",
@@ -46,4 +51,6 @@ __all__ = [
     "DiffEntry",
     "EndpointDiff",
     "SchemaDiff",
+    "SemverBump",
+    "SemverResult",
 ]

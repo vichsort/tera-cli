@@ -28,3 +28,4 @@ def test_load_schema_from_invalid_syntax(tmp_path: Path) -> None:
 
     with pytest.raises(TeraError):
         load_schema_from_source(invalid_file)
+

@@ -5,9 +5,16 @@ from pathlib import Path
 from pydantic import ValidationError
 from tera.core import factory, loader
 from tera.core.factory import WriterFormatStyle
-from tera.services import run_pipeline, InitService, LinterService, DiffService, load_schema_from_source
+from tera.services import (
+    run_pipeline, 
+    InitService, 
+    LinterService, 
+    DiffService, 
+    load_schema_from_source, 
+    SemverService
+)
 from tera.exceptions import TeraError
-from tera.domain import LintSeverity, LintIssue, SchemaDiff
+from tera.domain import LintSeverity, LintIssue, SchemaDiff, SemverResult
 
 app = typer.Typer(help="Tera CLI - Documentation Converter")
 
@@ -99,6 +106,36 @@ def _print_diff_human_report(diff: SchemaDiff, base_ref: str, head_ref: str) -> 
     summary_color = typer.colors.RED if diff.has_breaking_changes else typer.colors.GREEN
     typer.secho(f"Summary: {diff.total_changes} change(s) ({breaking_str})", fg=summary_color, bold=True)
     typer.echo("")
+
+def _print_semver_human_report(result: SemverResult, base_ref: str, head_ref: str) -> None:
+    """Renders human-readable SemVer recommendation report."""
+    typer.echo("")
+    typer.secho(f"SemVer Analysis: '{base_ref}' -> '{head_ref}'\n", bold=True)
+
+    typer.echo(f"  Current Version:  {result.current_version}")
+
+    bump_color = typer.colors.GREEN
+    if result.bump == "major":
+        bump_color = typer.colors.RED
+    elif result.bump == "minor":
+        bump_color = typer.colors.BLUE
+    elif result.bump == "patch":
+        bump_color = typer.colors.YELLOW
+
+    typer.secho(f"  Recommended Bump: {result.bump.upper()}", fg=bump_color, bold=True)
+    typer.secho(f"  Next Version:     {result.next_version}", fg=typer.colors.GREEN, bold=True)
+    typer.echo("")
+
+    if result.reasons:
+        typer.secho("Justification:", fg=typer.colors.CYAN, bold=True)
+        for reason in result.reasons:
+            if "breaking" in reason.lower():
+                typer.secho(f"  - {reason}", fg=typer.colors.RED)
+            elif "added" in reason.lower() or "feature" in reason.lower():
+                typer.secho(f"  - {reason}", fg=typer.colors.GREEN)
+            else:
+                typer.secho(f"  - {reason}", fg=typer.colors.BRIGHT_BLACK)
+        typer.echo("")
 
 def _execute_pipeline(input_source: str, output_path: Path, format_style: WriterFormatStyle = 'tera') -> None:
     """
@@ -347,3 +384,62 @@ def diff(
 
     if fail_on_breaking and schema_diff.has_breaking_changes:
         raise typer.Exit(code=1)
+
+@app.command()
+def semver(
+    base: str = typer.Argument(..., help="Base schema file or git ref (e.g. docs.v1.yaml or HEAD~1:docs.yaml)."),
+    head: str = typer.Argument("docs.yaml", help="Head schema file or git ref. Default: docs.yaml."),
+    bump: bool = typer.Option(False, "--bump", "-b", help="Directly update 'api.version' in the head file on disk."),
+    to_json: bool = typer.Option(False, "--json", "-j", help="Output SemVer recommendation as JSON.")
+) -> None:
+    """
+    Analyzes changes between specifications and suggests the next semantic version (MAJOR, MINOR, PATCH).
+    """
+    try:
+        base_schema = load_schema_from_source(base)
+    except FileNotFoundError as e:
+        _print_error("Base Not Found", str(e))
+        raise typer.Exit(code=1)
+    except TeraError as e:
+        _print_error(e.title, e.message)
+        raise typer.Exit(code=1)
+    except Exception as e:
+        _print_error("Error Loading Base", str(e))
+        raise typer.Exit(code=1)
+
+    try:
+        head_schema = load_schema_from_source(head)
+    except FileNotFoundError as e:
+        _print_error("Head Not Found", str(e))
+        raise typer.Exit(code=1)
+    except TeraError as e:
+        _print_error(e.title, e.message)
+        raise typer.Exit(code=1)
+    except Exception as e:
+        _print_error("Error Loading Head", str(e))
+        raise typer.Exit(code=1)
+
+    diff_service = DiffService()
+    schema_diff = diff_service.compare(base_schema, head_schema)
+
+    semver_service = SemverService()
+    result = semver_service.calculate_bump(schema_diff, head_schema.api.version)
+
+    if to_json:
+        typer.echo(json.dumps(result.model_dump(), indent=2))
+    else:
+        _print_semver_human_report(result, base, head)
+
+    if bump:
+        head_path = Path(head)
+        if not head_path.exists() or not head_path.is_file():
+            _print_error("Cannot Bump Version", f"Target head '{head}' is not a writable file on disk.")
+            raise typer.Exit(code=1)
+
+        try:
+            semver_service.apply_bump(head_path, result.next_version)
+            if not to_json:
+                typer.secho(f"✅ Updated '{head_path}' version to {result.next_version}\n", fg=typer.colors.GREEN, bold=True)
+        except Exception as e:
+            _print_error("Bump Failed", str(e))
+            raise typer.Exit(code=1)

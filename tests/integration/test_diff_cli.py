@@ -166,3 +166,4 @@ def test_cli_diff_file_not_found() -> None:
     result = runner.invoke(app, ["diff", "missing_base.yaml", "missing_head.yaml"])
     assert result.exit_code == 1
     assert "Base Not Found" in result.stdout
+

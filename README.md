@@ -34,6 +34,7 @@ Built with Clean Architecture principles and strict layer isolation:
   - `InitService`: Project boilerplate generation.
   - `LinterService`: Static syntax, schema, and semantic rule enforcement.
   - `DiffService`: Semantic schema comparison and breaking change detection.
+  - `SemverService`: Semantic version recommendation and version bumping.
 - **`cli`**: Subcommands powered by Typer.
 
 ---
@@ -124,6 +125,24 @@ tera diff docs.v1.yaml docs.v2.yaml --json
 # CI gates: fail on breaking changes or on any drift
 tera diff docs.v1.yaml docs.v2.yaml --fail-on-breaking
 tera diff docs.v1.yaml docs.v2.yaml --fail-on-drift
+```
+
+### 7. `semver`
+
+Recommends the next semantic version (`MAJOR`, `MINOR`, `PATCH`) based on the semantic diff between specifications, and optionally bumps the version in the destination specification file.
+
+```bash
+# Analyze changes and recommend bump
+tera semver docs.v1.yaml docs.v2.yaml
+
+# Compare against a git revision
+tera semver HEAD~1:docs.yaml docs.yaml
+
+# Output recommendation as JSON
+tera semver docs.v1.yaml docs.v2.yaml --json
+
+# Directly bump api.version in the target file on disk
+tera semver docs.v1.yaml docs.v2.yaml --bump
 ```
 
 ---
