@@ -1,6 +1,9 @@
 from pathlib import Path
 from typing import List
-import tomllib
+try:
+    import tomllib
+except ModuleNotFoundError:
+    import tomli as tomllib  # type: ignore
 from tera.core import TeraConfig
 
 CONFIG_FILENAME = ".teraconfig.toml"
