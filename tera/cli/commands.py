@@ -233,7 +233,6 @@ def lint(
         if config.lint.ignore:
             typer.secho(f"Ignoring rules: {', '.join(config.lint.ignore)}", fg=typer.colors.BRIGHT_BLACK)
     
-    # 3. Executa... (o resto continua igual)
     issues = service.lint(file_path)
 
     if to_json:

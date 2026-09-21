@@ -6,7 +6,8 @@ from .models import (
     ParamField, 
     BodyField,
     EndpointResponses, 
-    ResponseSuccess
+    ResponseSuccess,
+    FieldType
 )
 
 from .linting import (

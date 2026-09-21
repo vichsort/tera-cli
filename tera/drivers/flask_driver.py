@@ -7,14 +7,15 @@ from tera.domain import (
     Endpoint, 
     EndpointParams, 
     ParamField, 
-    BodyField,
+    BodyField, 
     EndpointResponses, 
-    ResponseSuccess
+    ResponseSuccess,
+    FieldType
 )
 
 class FlaskAppDriver:
     """
-    Driver capable of reading an Flask app via instrospection + static analysis.
+    Driver capable of reading a Flask app via introspection + static analysis.
     Detects: Routes, Docs, Auth (Decorators) and Body (Pydantic).
     """
     def __init__(self, app_import_string: str):
@@ -58,9 +59,11 @@ class FlaskAppDriver:
         body_fields: List[BodyField] = []
 
         for name, type_hint in sig_info.parameters.items():
+            param_type = self._map_type_hint_to_field_type(type_hint)
             if name in path_vars:
                 path_params.append(ParamField(
                     name=name,
+                    type=param_type,
                     required=True,
                     example=self._get_example_for_type(type_hint),
                     description="Path Parameter"
@@ -74,6 +77,7 @@ class FlaskAppDriver:
 
             query_params.append(ParamField(
                 name=name,
+                type=param_type,
                 required=False,
                 example=self._get_example_for_type(type_hint),
                 description="Query Parameter"
@@ -113,13 +117,16 @@ class FlaskAppDriver:
         properties = schema.get('properties', {})
         required_fields = schema.get('required', [])
         
+        valid_types = {'string', 'number', 'integer', 'boolean', 'array', 'object'}
         fields = []
         for name, props in properties.items():
-            prop_type = props.get('type', 'string')
+            raw_type = props.get('type', 'string')
+            prop_type: FieldType = raw_type if raw_type in valid_types else 'string'
             example = self._get_example_from_schema_type(prop_type)
             
             fields.append(BodyField(
                 name=name,
+                type=prop_type,
                 required=(name in required_fields),
                 description=props.get('description'),
                 example=example
@@ -138,6 +145,20 @@ class FlaskAppDriver:
         >       : End
         """
         return re.sub(r"<(?:\w+:)?(\w+)>", r"{\1}", flask_path)
+
+    def _map_type_hint_to_field_type(self, type_hint: Any) -> FieldType:
+        """Maps Python type hint to JSON Schema / FieldType."""
+        if type_hint is int:
+            return "integer"
+        if type_hint is float:
+            return "number"
+        if type_hint is bool:
+            return "boolean"
+        if type_hint is list:
+            return "array"
+        if type_hint is dict:
+            return "object"
+        return "string"
 
     def _get_example_from_schema_type(self, schema_type: str) -> Any:
         """Generates example based on JSON Schema type."""

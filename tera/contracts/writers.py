@@ -8,6 +8,6 @@ class TeraWriter(Protocol):
     """
     def write(self, schema: TeraSchema) -> None:
         """
-        Recieves a shcema and performs the write.
+        Receives a schema and performs the write.
         """
         ...

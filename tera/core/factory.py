@@ -30,14 +30,16 @@ def get_driver(source: Union[str, Path]) -> TeraDriver:
         "Supported formats: .yaml files or 'module:app' strings."
     )
 
-def get_writer(output_path: Path, format_style: Literal['tera', 'openapi'] = 'tera') -> TeraWriter:
+WriterFormatStyle = Literal['tera', 'openapi', 'markdown', 'html', 'postman']
+
+def get_writer(output_path: Path, format_style: WriterFormatStyle = 'tera') -> TeraWriter:
     """
     Factory Method for output writers.
     Decides based on file extension AND the desired format style.
     
     Args:
         output_path: Destination path.
-        format_style: 'tera' (Canonical YAML/JSON) or 'openapi' (Export format).
+        format_style: 'tera' (Canonical YAML/JSON), 'openapi', 'markdown', 'html', or 'postman'.
     """
     is_yaml = output_path.suffix in ['.yaml', '.yml']
     

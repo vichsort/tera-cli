@@ -3,15 +3,16 @@ from pydantic import BaseModel, Field, ConfigDict
 
 HTTPMethod = Literal['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD']
 AuthType = Literal['bearer', 'basic', 'apikey']
+FieldType = Literal['string', 'number', 'integer', 'boolean', 'array', 'object']
 
 class BaseField(BaseModel):
     """
-    Essencial content of data
+    Essential data field definition.
     """
     model_config = ConfigDict(extra='forbid')
 
     name: str
-    type: str = "string"
+    type: FieldType = "string"
     example: Any = None
     required: bool = False
     description: Optional[str] = None
@@ -49,7 +50,7 @@ class ResponseSuccess(BaseModel):
     model_config = ConfigDict(extra='forbid')
 
     status: int = 200
-    description: str = "Sucesso"
+    description: str = "Success"
     example: Any = None
 
 class ResponseError(BaseModel):
