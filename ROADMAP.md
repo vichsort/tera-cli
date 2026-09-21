@@ -144,10 +144,10 @@ Pesquisado e confirmado durante a sessão:
 
 ## 6. Ordem sugerida de execução
 
-1. Checklist de fundação (seção 2) — sem isso, qualquer feature nova é construída sobre uma base com bug conhecido e CI vermelho.
-2. `tera diff` (motor central) — destrava 5 das 6 features do grupo "motor central" de uma vez.
-3. A partir do diff: CI gate, changelog, self-healing, timeline, semver — nessa ordem ou na que fizer mais sentido no momento.
-4. Features independentes (detector de segurança, coverage report, grafo de dependência) podem entrar em paralelo, sem depender do diff.
+1. [x] Checklist de fundação (seção 2) — base estabilizada, bugs corrigidos e modo strict de tipagem habilitado.
+2. [x] `tera diff` (motor central) — comparação semântica entre versões, classificação de breaking changes e suporte a CI (`--fail-on-breaking`, `--fail-on-drift`).
+3. [ ] A partir do diff: CI gate, changelog, self-healing, timeline, semver — nessa ordem ou na que fizer mais sentido no momento.
+4. [ ] Features independentes (detector de segurança, coverage report, grafo de dependência) podem entrar em paralelo, sem depender do diff.
 
 ---
 

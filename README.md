@@ -33,6 +33,7 @@ Built with Clean Architecture principles and strict layer isolation:
   - `run_pipeline(driver, writer)`: Execution orchestrator.
   - `InitService`: Project boilerplate generation.
   - `LinterService`: Static syntax, schema, and semantic rule enforcement.
+  - `DiffService`: Semantic schema comparison and breaking change detection.
 - **`cli`**: Subcommands powered by Typer.
 
 ---
@@ -104,6 +105,25 @@ tera export docs.yaml --format markdown -o API.md
 
 # Postman collection
 tera export docs.yaml --format postman -o collection.json
+```
+
+### 6. `diff`
+
+Compares two API specifications semantically and detects breaking changes (e.g. removed endpoints, modified types, newly required parameters).
+
+```bash
+# Compare two specification files
+tera diff docs.v1.yaml docs.v2.yaml
+
+# Compare against a git revision
+tera diff HEAD~1:docs.yaml docs.yaml
+
+# JSON output for CI automation
+tera diff docs.v1.yaml docs.v2.yaml --json
+
+# CI gates: fail on breaking changes or on any drift
+tera diff docs.v1.yaml docs.v2.yaml --fail-on-breaking
+tera diff docs.v1.yaml docs.v2.yaml --fail-on-drift
 ```
 
 ---

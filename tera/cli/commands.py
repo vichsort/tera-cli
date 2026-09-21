@@ -5,9 +5,9 @@ from pathlib import Path
 from pydantic import ValidationError
 from tera.core import factory, loader
 from tera.core.factory import WriterFormatStyle
-from tera.services import run_pipeline, InitService, LinterService
+from tera.services import run_pipeline, InitService, LinterService, DiffService, load_schema_from_source
 from tera.exceptions import TeraError
-from tera.domain import LintSeverity, LintIssue
+from tera.domain import LintSeverity, LintIssue, SchemaDiff
 
 app = typer.Typer(help="Tera CLI - Documentation Converter")
 
@@ -57,6 +57,48 @@ def _print_json_lint_report(issues: list[LintIssue]) -> None:
     """Renders output as JSON for cli"""
     output = [issue.model_dump() for issue in issues]
     typer.echo(json.dumps(output, indent=2))
+
+def _print_diff_human_report(diff: SchemaDiff, base_ref: str, head_ref: str) -> None:
+    """Renders human-readable colored diff report for the CLI."""
+    typer.echo("")
+    typer.secho(f"Comparing '{base_ref}' -> '{head_ref}'\n", bold=True)
+
+    if diff.is_empty:
+        typer.secho("✅ No differences detected. Specifications are identical.", fg=typer.colors.GREEN, bold=True)
+        typer.echo("")
+        return
+
+    if diff.api_changes:
+        typer.secho("API Metadata:", fg=typer.colors.CYAN, bold=True)
+        for change in diff.api_changes:
+            icon = "+" if change.kind == "added" else ("-" if change.kind == "removed" else "~")
+            color = typer.colors.RED if change.impact == "breaking" else (typer.colors.GREEN if change.kind == "added" else typer.colors.YELLOW)
+            breaking_tag = " [BREAKING]" if change.impact == "breaking" else ""
+            typer.secho(f"  {icon} {change.path}{breaking_tag}: {change.description}", fg=color)
+        typer.echo("")
+
+    if diff.endpoint_diffs:
+        typer.secho("Endpoints:", fg=typer.colors.CYAN, bold=True)
+        for ep in diff.endpoint_diffs:
+            if ep.kind == "added":
+                typer.secho(f"  + {ep.method} {ep.path} (added)", fg=typer.colors.GREEN, bold=True)
+            elif ep.kind == "removed":
+                typer.secho(f"  - {ep.method} {ep.path} [BREAKING] (removed)", fg=typer.colors.RED, bold=True)
+            else:
+                ep_breaking = " [BREAKING]" if ep.impact == "breaking" else ""
+                ep_color = typer.colors.RED if ep.impact == "breaking" else typer.colors.YELLOW
+                typer.secho(f"  ~ {ep.method} {ep.path}{ep_breaking}", fg=ep_color, bold=True)
+                for c in ep.changes:
+                    c_icon = "+" if c.kind == "added" else ("-" if c.kind == "removed" else "~")
+                    c_breaking = " [BREAKING]" if c.impact == "breaking" else ""
+                    c_color = typer.colors.RED if c.impact == "breaking" else (typer.colors.GREEN if c.kind == "added" else typer.colors.YELLOW)
+                    typer.secho(f"      {c_icon} {c.description}{c_breaking}", fg=c_color)
+        typer.echo("")
+
+    breaking_str = f"{diff.breaking_count} breaking" if diff.breaking_count > 0 else "0 breaking"
+    summary_color = typer.colors.RED if diff.has_breaking_changes else typer.colors.GREEN
+    typer.secho(f"Summary: {diff.total_changes} change(s) ({breaking_str})", fg=summary_color, bold=True)
+    typer.echo("")
 
 def _execute_pipeline(input_source: str, output_path: Path, format_style: WriterFormatStyle = 'tera') -> None:
     """
@@ -256,3 +298,52 @@ def lint(
             typer.secho("\n⚠️  Passed with warnings.", fg=typer.colors.YELLOW, bold=True)
         else:
             typer.secho("\n✅ No issues found. Good job!", fg=typer.colors.GREEN, bold=True)
+
+@app.command()
+def diff(
+    base: str = typer.Argument(..., help="Base schema file or git ref (e.g. docs.v1.yaml or HEAD~1:docs.yaml)."),
+    head: str = typer.Argument("docs.yaml", help="Head schema file or git ref. Default: docs.yaml."),
+    to_json: bool = typer.Option(False, "--json", "-j", help="Output diff result as JSON."),
+    fail_on_breaking: bool = typer.Option(False, "--fail-on-breaking", help="Exit with code 1 if breaking changes are detected."),
+    fail_on_drift: bool = typer.Option(False, "--fail-on-drift", help="Exit with code 1 if any difference is detected.")
+) -> None:
+    """
+    Compares two API specifications semantically and highlights breaking changes.
+    """
+    try:
+        base_schema = load_schema_from_source(base)
+    except FileNotFoundError as e:
+        _print_error("Base Not Found", str(e))
+        raise typer.Exit(code=1)
+    except TeraError as e:
+        _print_error(e.title, e.message)
+        raise typer.Exit(code=1)
+    except Exception as e:
+        _print_error("Error Loading Base", str(e))
+        raise typer.Exit(code=1)
+
+    try:
+        head_schema = load_schema_from_source(head)
+    except FileNotFoundError as e:
+        _print_error("Head Not Found", str(e))
+        raise typer.Exit(code=1)
+    except TeraError as e:
+        _print_error(e.title, e.message)
+        raise typer.Exit(code=1)
+    except Exception as e:
+        _print_error("Error Loading Head", str(e))
+        raise typer.Exit(code=1)
+
+    service = DiffService()
+    schema_diff = service.compare(base_schema, head_schema)
+
+    if to_json:
+        typer.echo(json.dumps(schema_diff.model_dump(), indent=2))
+    else:
+        _print_diff_human_report(schema_diff, base, head)
+
+    if fail_on_drift and not schema_diff.is_empty:
+        raise typer.Exit(code=1)
+
+    if fail_on_breaking and schema_diff.has_breaking_changes:
+        raise typer.Exit(code=1)
