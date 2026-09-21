@@ -137,7 +137,7 @@ Executada em 3 etapas cirúrgicas para consolidar a escalabilidade do projeto:
 
 ## 6. Estado Atual de Validação e Qualidade
 
-- **Suíte de Testes**: 162 testes automatizados (unitários e de integração), 100% passando em ~1.7s.
+- **Suíte de Testes**: 201 testes automatizados (unitários e de integração), 100% passando em ~1.7s.
 - **Tipagem Estrita**: Pyright configurado no modo `strict` com 0 erros e 0 warnings.
 - **Clean Architecture**: Domínio desacoplado de frameworks de apresentação e infraestrutura externa.
 
