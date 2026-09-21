@@ -1,5 +1,5 @@
 import re
-from typing import Any, List, Set, cast
+from typing import Any, Dict, List, Set, cast
 from tera.drivers.inspection import loader, parser, ast_parser, type_utils
 from tera.domain import (
     TeraSchema, 
@@ -59,18 +59,28 @@ class FlaskAppDriver:
         path_params: List[ParamField] = []
         body_fields: List[BodyField] = []
 
+        converters = self._extract_flask_converters(str(rule))
+        processed_path_vars: Set[str] = set()
+
         for name, type_hint in sig_info.parameters.items():
-            param_type = self._map_type_hint_to_field_type(type_hint)
             if name in path_vars:
+                processed_path_vars.add(name)
+                param_type = self._resolve_path_param_type(name, type_hint, converters)
+                example = (
+                    self._get_example_for_type(type_hint)
+                    if type_hint is not None and type_hint is not str
+                    else self._get_example_from_schema_type(param_type)
+                )
                 path_params.append(ParamField(
                     name=name,
                     type=param_type,
                     required=True,
-                    example=self._get_example_for_type(type_hint),
+                    example=example,
                     description="Path Parameter"
                 ))
                 continue
 
+            param_type = self._map_type_hint_to_field_type(type_hint)
             if method in ['POST', 'PUT', 'PATCH'] and type_utils.is_pydantic_model(type_hint):
                 extracted_fields = self._extract_pydantic_fields(type_hint)
                 body_fields.extend(extracted_fields)
@@ -83,6 +93,18 @@ class FlaskAppDriver:
                 example=self._get_example_for_type(type_hint),
                 description="Query Parameter"
             ))
+
+        for name in path_vars - processed_path_vars:
+            param_type = self._resolve_path_param_type(name, None, converters)
+            path_params.append(ParamField(
+                name=name,
+                type=param_type,
+                required=True,
+                example=self._get_example_from_schema_type(param_type),
+                description="Path Parameter"
+            ))
+
+        path_params.sort(key=lambda p: path_openapi.find(f"{{{p.name}}}"))
 
         return Endpoint(
             path=path_openapi,
@@ -136,16 +158,50 @@ class FlaskAppDriver:
 
     def _convert_flask_path_to_openapi(self, flask_path: str) -> str:
         r"""
-        Converts '/user/<int:id>' to '/user/{id}'
-        Regex:
-        <       : Start
-        (?:     : Non-capturing group (optional)
-          \w+:  : Text followed by colon (e.g., 'int:')
-        )?      : Non-capturing group (optional)
-        (\w+)   : Variable name (captured)
-        >       : End
+        Converts '/user/<int:id>' or '/user/<int(min=1):id>' to '/user/{id}'
         """
-        return re.sub(r"<(?:\w+:)?(\w+)>", r"{\1}", flask_path)
+        return re.sub(r"<(?:\w+(?:\([^)]*\))?:)?(\w+)>", r"{\1}", flask_path)
+
+    def _extract_flask_converters(self, rule_str: str) -> Dict[str, str]:
+        r"""
+        Extracts converter types from Flask URL rule like <int:user_id> or <float(precision=2):ratio>.
+        Returns a dict mapping variable name to converter identifier (e.g. {'user_id': 'int'}).
+        """
+        matches = re.findall(r"<(\w+)(?:\([^)]*\))?:(\w+)>", rule_str)
+        return {var_name: conv_name for conv_name, var_name in matches}
+
+    def _resolve_path_param_type(
+        self,
+        name: str,
+        type_hint: Any,
+        converters: Dict[str, str]
+    ) -> FieldType:
+        """
+        Resolves path parameter type checking signature type hints first,
+        falling back to Flask route converter when unannotated or default string.
+        """
+        if type_hint is not None and type_hint is not str:
+            inferred = self._map_type_hint_to_field_type(type_hint)
+            if inferred != "string":
+                return inferred
+
+        conv = converters.get(name)
+        if conv:
+            conv_map: Dict[str, FieldType] = {
+                "int": "integer",
+                "float": "number",
+                "uuid": "string",
+                "path": "string",
+                "string": "string",
+                "any": "string",
+            }
+            if conv in conv_map:
+                return conv_map[conv]
+
+        if type_hint is not None:
+            return self._map_type_hint_to_field_type(type_hint)
+
+        return "string"
 
     def _map_type_hint_to_field_type(self, type_hint: Any) -> FieldType:
         """Maps Python type hint to JSON Schema / FieldType."""
