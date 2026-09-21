@@ -14,3 +14,4 @@ class SemverResult(BaseModel):
     next_version: str
     reasons: List[str] = Field(default_factory=list[str])
     breaking_count: int = 0
+

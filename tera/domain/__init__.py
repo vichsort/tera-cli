@@ -31,6 +31,8 @@ from .semver import (
     SemverResult
 )
 
+from .changelog import ChangelogSection
+
 __all__ = [
     "TeraSchema",
     "Endpoint",
@@ -53,4 +55,5 @@ __all__ = [
     "SchemaDiff",
     "SemverBump",
     "SemverResult",
+    "ChangelogSection",
 ]

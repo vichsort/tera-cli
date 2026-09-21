@@ -11,7 +11,8 @@ from tera.services import (
     LinterService, 
     DiffService, 
     load_schema_from_source, 
-    SemverService
+    SemverService,
+    ChangelogService
 )
 from tera.exceptions import TeraError
 from tera.domain import LintSeverity, LintIssue, SchemaDiff, SemverResult
@@ -443,3 +444,74 @@ def semver(
         except Exception as e:
             _print_error("Bump Failed", str(e))
             raise typer.Exit(code=1)
+
+@app.command()
+def changelog(
+    base: str = typer.Argument(..., help="Base schema file or git ref (e.g. docs.v1.yaml or HEAD~1:docs.yaml)."),
+    head: str = typer.Argument("docs.yaml", help="Head schema file or git ref. Default: docs.yaml."),
+    version: Optional[str] = typer.Option(None, "--version", "-v", help="Release version. Default: version from head schema."),
+    release_date: Optional[str] = typer.Option(None, "--date", "-d", help="Release date (YYYY-MM-DD). Default: today."),
+    output_file: Optional[Path] = typer.Option(None, "--output", "-o", help="Write changelog markdown snippet to a file."),
+    append: bool = typer.Option(False, "--append", "-a", help="Prepend new release section into CHANGELOG.md in current directory."),
+    to_json: bool = typer.Option(False, "--json", "-j", help="Output changelog section as JSON.")
+) -> None:
+    """
+    Generates Keep a Changelog markdown entries from semantic schema differences.
+    """
+    try:
+        base_schema = load_schema_from_source(base)
+    except FileNotFoundError as e:
+        _print_error("Base Not Found", str(e))
+        raise typer.Exit(code=1)
+    except TeraError as e:
+        _print_error(e.title, e.message)
+        raise typer.Exit(code=1)
+    except Exception as e:
+        _print_error("Error Loading Base", str(e))
+        raise typer.Exit(code=1)
+
+    try:
+        head_schema = load_schema_from_source(head)
+    except FileNotFoundError as e:
+        _print_error("Head Not Found", str(e))
+        raise typer.Exit(code=1)
+    except TeraError as e:
+        _print_error(e.title, e.message)
+        raise typer.Exit(code=1)
+    except Exception as e:
+        _print_error("Error Loading Head", str(e))
+        raise typer.Exit(code=1)
+
+    diff_service = DiffService()
+    schema_diff = diff_service.compare(base_schema, head_schema)
+
+    target_version = version or head_schema.api.version
+
+    changelog_service = ChangelogService()
+    section = changelog_service.generate(schema_diff, version=target_version, release_date=release_date)
+
+    if to_json:
+        typer.echo(json.dumps(section.model_dump(), indent=2))
+        return
+
+    md_output = section.to_markdown()
+
+    if output_file:
+        try:
+            output_file.write_text(md_output + "\n", encoding="utf-8")
+            typer.secho(f"✅ Changelog written to '{output_file}'\n", fg=typer.colors.GREEN, bold=True)
+        except Exception as e:
+            _print_error("Write Error", f"Could not write to '{output_file}': {e}")
+            raise typer.Exit(code=1)
+
+    if append:
+        changelog_path = Path("CHANGELOG.md")
+        try:
+            changelog_service.append_to_file(changelog_path, section)
+            typer.secho(f"✅ Prepended release [{target_version}] into '{changelog_path}'\n", fg=typer.colors.GREEN, bold=True)
+        except Exception as e:
+            _print_error("Append Error", f"Could not update '{changelog_path}': {e}")
+            raise typer.Exit(code=1)
+
+    if not output_file and not append:
+        typer.echo(md_output)

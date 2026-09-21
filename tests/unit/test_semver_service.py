@@ -136,3 +136,4 @@ def test_apply_bump_json(tmp_path: Path) -> None:
 
     content = json_file.read_text(encoding="utf-8")
     assert '"version": "2.0.0"' in content
+

@@ -35,6 +35,7 @@ Built with Clean Architecture principles and strict layer isolation:
   - `LinterService`: Static syntax, schema, and semantic rule enforcement.
   - `DiffService`: Semantic schema comparison and breaking change detection.
   - `SemverService`: Semantic version recommendation and version bumping.
+  - `ChangelogService`: Automated Keep a Changelog generator.
 - **`cli`**: Subcommands powered by Typer.
 
 ---
@@ -143,6 +144,27 @@ tera semver docs.v1.yaml docs.v2.yaml --json
 
 # Directly bump api.version in the target file on disk
 tera semver docs.v1.yaml docs.v2.yaml --bump
+```
+
+### 8. `changelog`
+
+Generates structured release notes following the [Keep a Changelog](https://keepachangelog.com/) standard (`Added`, `Changed`, `Removed`, `Security`) from the semantic differences between specifications.
+
+```bash
+# Print changelog markdown to stdout
+tera changelog docs.v1.yaml docs.v2.yaml
+
+# Compare against a git revision
+tera changelog HEAD~1:docs.yaml docs.yaml
+
+# Write changelog snippet to a file
+tera changelog docs.v1.yaml docs.v2.yaml -o RELEASE_NOTES.md
+
+# Prepend release section into CHANGELOG.md
+tera changelog docs.v1.yaml docs.v2.yaml --append
+
+# Output structured JSON
+tera changelog docs.v1.yaml docs.v2.yaml --json
 ```
 
 ---
