@@ -79,11 +79,7 @@ class CoverageService:
         has_error_responses = len(ep.responses.errors) > 0
 
         # Collect parameters
-        params_list: List[ParamField] = []
-        if ep.params:
-            params_list.extend(ep.params.query)
-            params_list.extend(ep.params.path)
-            params_list.extend(ep.params.header)
+        params_list: List[ParamField] = ep.params.all_params if ep.params else []
 
         total_params = len(params_list)
         doc_params = sum(1 for p in params_list if p.description and p.description.strip())

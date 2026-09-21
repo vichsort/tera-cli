@@ -1,5 +1,5 @@
-from typing import List, Optional, Any, Literal
-from pydantic import BaseModel, Field, ConfigDict
+from typing import List, Optional, Any, Literal, Dict, Tuple
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 
 HTTPMethod = Literal['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD']
 AuthType = Literal['bearer', 'basic', 'apikey']
@@ -46,6 +46,10 @@ class EndpointParams(BaseModel):
     path: List[ParamField] = Field(default_factory=list[ParamField])
     header: List[ParamField] = Field(default_factory=list[ParamField])
 
+    @property
+    def all_params(self) -> List[ParamField]:
+        return self.query + self.path + self.header
+
 class ResponseSuccess(BaseModel):
     model_config = ConfigDict(extra='forbid')
 
@@ -80,6 +84,21 @@ class Endpoint(BaseModel):
     body: List[BodyField] = Field(default_factory=list[BodyField])
     responses: EndpointResponses
 
+    @field_validator("method", mode="before")
+    @classmethod
+    def normalize_method(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            return v.upper()
+        return v
+
+    @property
+    def key(self) -> Tuple[str, str]:
+        return (self.method, self.path)
+
+    @property
+    def identifier(self) -> str:
+        return f"{self.method} {self.path}"
+
 class TeraSchema(BaseModel):
     """
     Root schema, representing the entire API.
@@ -88,3 +107,10 @@ class TeraSchema(BaseModel):
 
     api: ApiConfig
     endpoints: List[Endpoint]
+
+    @property
+    def endpoint_map(self) -> Dict[Tuple[str, str], Endpoint]:
+        return {ep.key: ep for ep in self.endpoints}
+
+    def get_endpoint(self, method: str, path: str) -> Optional[Endpoint]:
+        return self.endpoint_map.get((method.upper(), path))

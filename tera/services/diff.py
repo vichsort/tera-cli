@@ -1,9 +1,9 @@
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Sequence
 from tera.domain import (
     TeraSchema,
     Endpoint,
-    ParamField,
     BodyField,
+    BaseField,
     DiffEntry,
     EndpointDiff,
     SchemaDiff,
@@ -112,12 +112,8 @@ class DiffService:
     def _compare_endpoints(self, base_endpoints: List[Endpoint], head_endpoints: List[Endpoint]) -> list[EndpointDiff]:
         endpoint_diffs: list[EndpointDiff] = []
 
-        base_map: Dict[Tuple[str, str], Endpoint] = {
-            (ep.method.upper(), ep.path): ep for ep in base_endpoints
-        }
-        head_map: Dict[Tuple[str, str], Endpoint] = {
-            (ep.method.upper(), ep.path): ep for ep in head_endpoints
-        }
+        base_map: Dict[Tuple[str, str], Endpoint] = {ep.key: ep for ep in base_endpoints}
+        head_map: Dict[Tuple[str, str], Endpoint] = {ep.key: ep for ep in head_endpoints}
 
         all_keys = sorted(set(base_map.keys()) | set(head_map.keys()), key=lambda k: (k[1], k[0]))
 
@@ -162,7 +158,7 @@ class DiffService:
 
     def _compare_single_endpoint(self, base_ep: Endpoint, head_ep: Endpoint) -> list[DiffEntry]:
         changes: list[DiffEntry] = []
-        ref = f"{head_ep.method} {head_ep.path}"
+        ref = head_ep.identifier
 
         # Metadata
         if base_ep.summary != head_ep.summary:
@@ -234,138 +230,57 @@ class DiffService:
 
         return changes
 
-    def _compare_param_group(
+    def _compare_fields(
         self,
-        group_name: str,
-        base_ep: Endpoint,
-        head_ep: Endpoint,
-        ref: str
+        base_fields: Sequence[BaseField],
+        head_fields: Sequence[BaseField],
+        path_prefix: str,
+        label: str,
+        removal_is_breaking: bool,
     ) -> list[DiffEntry]:
         changes: list[DiffEntry] = []
 
-        base_params: List[ParamField] = []
-        if base_ep.params is not None:
-            base_params = getattr(base_ep.params, group_name, [])
+        base_map: Dict[str, BaseField] = {f.name: f for f in base_fields}
+        head_map: Dict[str, BaseField] = {f.name: f for f in head_fields}
 
-        head_params: List[ParamField] = []
-        if head_ep.params is not None:
-            head_params = getattr(head_ep.params, group_name, [])
-
-        base_p_map: Dict[str, ParamField] = {p.name: p for p in base_params}
-        head_p_map: Dict[str, ParamField] = {p.name: p for p in head_params}
-
-        all_param_names = sorted(set(base_p_map.keys()) | set(head_p_map.keys()))
-
-        for name in all_param_names:
-            param_path = f"{ref} -> params.{group_name}[{name}]"
-            if name not in base_p_map:
-                param = head_p_map[name]
-                is_breaking = param.required
-                changes.append(DiffEntry(
-                    path=param_path,
-                    kind="added",
-                    category="structural",
-                    impact="breaking" if is_breaking else "non_breaking",
-                    description=f"Added {'required' if is_breaking else 'optional'} {group_name} parameter '{name}' ({param.type})",
-                    old_value=None,
-                    new_value=param.model_dump()
-                ))
-            elif name not in head_p_map:
-                param = base_p_map[name]
-                is_breaking = (group_name == "path")
-                changes.append(DiffEntry(
-                    path=param_path,
-                    kind="removed",
-                    category="structural",
-                    impact="breaking" if is_breaking else "non_breaking",
-                    description=f"Removed {group_name} parameter '{name}'",
-                    old_value=param.model_dump(),
-                    new_value=None
-                ))
-            else:
-                base_p = base_p_map[name]
-                head_p = head_p_map[name]
-
-                if base_p.type != head_p.type:
-                    changes.append(DiffEntry(
-                        path=f"{param_path}.type",
-                        kind="modified",
-                        category="structural",
-                        impact="breaking",
-                        description=f"Type of {group_name} parameter '{name}' changed from '{base_p.type}' to '{head_p.type}'",
-                        old_value=base_p.type,
-                        new_value=head_p.type
-                    ))
-
-                if base_p.required != head_p.required:
-                    is_breaking = head_p.required
-                    changes.append(DiffEntry(
-                        path=f"{param_path}.required",
-                        kind="modified",
-                        category="structural",
-                        impact="breaking" if is_breaking else "non_breaking",
-                        description=f"{group_name.capitalize()} parameter '{name}' became {'required' if head_p.required else 'optional'}",
-                        old_value=base_p.required,
-                        new_value=head_p.required
-                    ))
-
-                if base_p.description != head_p.description:
-                    changes.append(DiffEntry(
-                        path=f"{param_path}.description",
-                        kind="modified",
-                        category="metadata",
-                        impact="non_breaking",
-                        description=f"Description of {group_name} parameter '{name}' updated",
-                        old_value=base_p.description,
-                        new_value=head_p.description
-                    ))
-
-        return changes
-
-    def _compare_body(self, base_body: List[BodyField], head_body: List[BodyField], ref: str) -> list[DiffEntry]:
-        changes: list[DiffEntry] = []
-
-        base_b_map: Dict[str, BodyField] = {b.name: b for b in base_body}
-        head_b_map: Dict[str, BodyField] = {b.name: b for b in head_body}
-
-        all_names = sorted(set(base_b_map.keys()) | set(head_b_map.keys()))
+        all_names = sorted(set(base_map.keys()) | set(head_map.keys()))
 
         for name in all_names:
-            body_path = f"{ref} -> body[{name}]"
-            if name not in base_b_map:
-                field = head_b_map[name]
+            field_path = f"{path_prefix}[{name}]"
+            if name not in base_map:
+                field = head_map[name]
                 is_breaking = field.required
                 changes.append(DiffEntry(
-                    path=body_path,
+                    path=field_path,
                     kind="added",
                     category="structural",
                     impact="breaking" if is_breaking else "non_breaking",
-                    description=f"Added {'required' if is_breaking else 'optional'} body field '{name}' ({field.type})",
+                    description=f"Added {'required' if is_breaking else 'optional'} {label} '{name}' ({field.type})",
                     old_value=None,
                     new_value=field.model_dump()
                 ))
-            elif name not in head_b_map:
-                field = base_b_map[name]
+            elif name not in head_map:
+                field = base_map[name]
                 changes.append(DiffEntry(
-                    path=body_path,
+                    path=field_path,
                     kind="removed",
                     category="structural",
-                    impact="breaking",
-                    description=f"Removed body field '{name}'",
+                    impact="breaking" if removal_is_breaking else "non_breaking",
+                    description=f"Removed {label} '{name}'",
                     old_value=field.model_dump(),
                     new_value=None
                 ))
             else:
-                base_f = base_b_map[name]
-                head_f = head_b_map[name]
+                base_f = base_map[name]
+                head_f = head_map[name]
 
                 if base_f.type != head_f.type:
                     changes.append(DiffEntry(
-                        path=f"{body_path}.type",
+                        path=f"{field_path}.type",
                         kind="modified",
                         category="structural",
                         impact="breaking",
-                        description=f"Type of body field '{name}' changed from '{base_f.type}' to '{head_f.type}'",
+                        description=f"Type of {label} '{name}' changed from '{base_f.type}' to '{head_f.type}'",
                         old_value=base_f.type,
                         new_value=head_f.type
                     ))
@@ -373,27 +288,53 @@ class DiffService:
                 if base_f.required != head_f.required:
                     is_breaking = head_f.required
                     changes.append(DiffEntry(
-                        path=f"{body_path}.required",
+                        path=f"{field_path}.required",
                         kind="modified",
                         category="structural",
                         impact="breaking" if is_breaking else "non_breaking",
-                        description=f"Body field '{name}' became {'required' if head_f.required else 'optional'}",
+                        description=f"{label.capitalize()} '{name}' became {'required' if head_f.required else 'optional'}",
                         old_value=base_f.required,
                         new_value=head_f.required
                     ))
 
                 if base_f.description != head_f.description:
                     changes.append(DiffEntry(
-                        path=f"{body_path}.description",
+                        path=f"{field_path}.description",
                         kind="modified",
                         category="metadata",
                         impact="non_breaking",
-                        description=f"Description of body field '{name}' updated",
+                        description=f"Description of {label} '{name}' updated",
                         old_value=base_f.description,
                         new_value=head_f.description
                     ))
 
         return changes
+
+    def _compare_param_group(
+        self,
+        group_name: str,
+        base_ep: Endpoint,
+        head_ep: Endpoint,
+        ref: str
+    ) -> list[DiffEntry]:
+        base_params = getattr(base_ep.params, group_name, []) if base_ep.params else []
+        head_params = getattr(head_ep.params, group_name, []) if head_ep.params else []
+        return self._compare_fields(
+            base_fields=base_params,
+            head_fields=head_params,
+            path_prefix=f"{ref} -> params.{group_name}",
+            label=f"{group_name} parameter",
+            removal_is_breaking=(group_name == "path"),
+        )
+
+    def _compare_body(self, base_body: List[BodyField], head_body: List[BodyField], ref: str) -> list[DiffEntry]:
+        return self._compare_fields(
+            base_fields=base_body,
+            head_fields=head_body,
+            path_prefix=f"{ref} -> body",
+            label="body field",
+            removal_is_breaking=True,
+        )
 
     def _compare_responses(self, base_ep: Endpoint, head_ep: Endpoint, ref: str) -> list[DiffEntry]:
         changes: list[DiffEntry] = []

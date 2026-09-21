@@ -1,14 +1,16 @@
-from typing import List, Dict, Tuple
+from typing import List, Tuple, TypeVar, Optional
 from tera.domain import (
     TeraSchema,
     Endpoint,
     EndpointParams,
-    ParamField,
     BodyField,
+    BaseField,
     EndpointResponses,
     ResponseSuccess,
     SyncResult
 )
+
+F = TypeVar("F", bound=BaseField)
 
 class SyncService:
     """
@@ -22,12 +24,8 @@ class SyncService:
         doc_schema: TeraSchema,
         prune: bool = False
     ) -> SyncResult:
-        code_map: Dict[Tuple[str, str], Endpoint] = {
-            (ep.method.upper(), ep.path): ep for ep in code_schema.endpoints
-        }
-        doc_map: Dict[Tuple[str, str], Endpoint] = {
-            (ep.method.upper(), ep.path): ep for ep in doc_schema.endpoints
-        }
+        code_map = code_schema.endpoint_map
+        doc_map = doc_schema.endpoint_map
 
         endpoints_added: List[str] = []
         endpoints_updated: List[str] = []
@@ -41,18 +39,18 @@ class SyncService:
         for key, code_ep in code_map.items():
             if key not in doc_map:
                 merged_endpoints.append(code_ep.model_copy(deep=True))
-                endpoints_added.append(f"{code_ep.method} {code_ep.path}")
+                endpoints_added.append(code_ep.identifier)
             else:
                 doc_ep = doc_map[key]
                 merged_ep, preserved_count = self._merge_endpoint(code_ep, doc_ep)
                 merged_endpoints.append(merged_ep)
-                endpoints_updated.append(f"{code_ep.method} {code_ep.path}")
+                endpoints_updated.append(code_ep.identifier)
                 total_preserved += preserved_count
 
         # Process orphaned endpoints in doc_schema
         for key, doc_ep in doc_map.items():
             if key not in code_map:
-                ref = f"{doc_ep.method} {doc_ep.path}"
+                ref = doc_ep.identifier
                 if prune:
                     endpoints_pruned.append(ref)
                 else:
@@ -135,60 +133,51 @@ class SyncService:
         )
         return merged_ep, preserved_count
 
+    @staticmethod
+    def _merge_field_list(
+        code_fields: List[F],
+        doc_fields: List[F]
+    ) -> Tuple[List[F], int]:
+        preserved_count = 0
+        doc_lookup = {f.name: f for f in doc_fields}
+        result: List[F] = []
+        for cf in code_fields:
+            field = cf.model_copy(deep=True)
+            if cf.name in doc_lookup:
+                df = doc_lookup[cf.name]
+                if df.description:
+                    field.description = df.description
+                    preserved_count += 1
+                if df.example is not None:
+                    field.example = df.example
+                    preserved_count += 1
+            result.append(field)
+        return result, preserved_count
+
     def _merge_params(
         self,
-        code_params: EndpointParams | None,
-        doc_params: EndpointParams | None
+        code_params: Optional[EndpointParams],
+        doc_params: Optional[EndpointParams]
     ) -> Tuple[EndpointParams, int]:
-        preserved_count = 0
-
         code_p = code_params or EndpointParams()
         doc_p = doc_params or EndpointParams()
 
-        def merge_group(code_list: List[ParamField], doc_list: List[ParamField]) -> List[ParamField]:
-            nonlocal preserved_count
-            doc_lookup = {p.name: p for p in doc_list}
-            result: List[ParamField] = []
-            for cp in code_list:
-                param = cp.model_copy(deep=True)
-                if cp.name in doc_lookup:
-                    dp = doc_lookup[cp.name]
-                    if dp.description:
-                        param.description = dp.description
-                        preserved_count += 1
-                    if dp.example is not None:
-                        param.example = dp.example
-                        preserved_count += 1
-                result.append(param)
-            return result
+        query, q_count = self._merge_field_list(code_p.query, doc_p.query)
+        path, p_count = self._merge_field_list(code_p.path, doc_p.path)
+        header, h_count = self._merge_field_list(code_p.header, doc_p.header)
 
         merged = EndpointParams(
-            query=merge_group(code_p.query, doc_p.query),
-            path=merge_group(code_p.path, doc_p.path),
-            header=merge_group(code_p.header, doc_p.header)
+            query=query,
+            path=path,
+            header=header
         )
-        return merged, preserved_count
+        return merged, q_count + p_count + h_count
 
     def _merge_body(
         self,
         code_body: List[BodyField],
         doc_body: List[BodyField]
     ) -> Tuple[List[BodyField], int]:
-        preserved_count = 0
-        doc_lookup = {f.name: f for f in doc_body}
-        merged_fields: List[BodyField] = []
+        return self._merge_field_list(code_body, doc_body)
 
-        for cb in code_body:
-            field = cb.model_copy(deep=True)
-            if cb.name in doc_lookup:
-                db = doc_lookup[cb.name]
-                if db.description:
-                    field.description = db.description
-                    preserved_count += 1
-                if db.example is not None:
-                    field.example = db.example
-                    preserved_count += 1
-            merged_fields.append(field)
-
-        return merged_fields, preserved_count
 

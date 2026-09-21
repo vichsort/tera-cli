@@ -1,7 +1,6 @@
-from typing import List, Dict, Tuple
+from typing import List
 from tera.domain import (
     TeraSchema,
-    Endpoint,
     SecurityIssue,
     SecurityDriftReport
 )
@@ -12,12 +11,8 @@ class SecurityDriftService:
     """
 
     def audit(self, code_schema: TeraSchema, doc_schema: TeraSchema) -> SecurityDriftReport:
-        code_map: Dict[Tuple[str, str], Endpoint] = {
-            (ep.method.upper(), ep.path): ep for ep in code_schema.endpoints
-        }
-        doc_map: Dict[Tuple[str, str], Endpoint] = {
-            (ep.method.upper(), ep.path): ep for ep in doc_schema.endpoints
-        }
+        code_map = code_schema.endpoint_map
+        doc_map = doc_schema.endpoint_map
 
         issues: List[SecurityIssue] = []
 
@@ -35,7 +30,7 @@ class SecurityDriftService:
                     drift_type="missing_auth_in_code",
                     severity="CRITICAL",
                     description=(
-                        f"Endpoint '{code_ep.method} {code_ep.path}' is documented as requiring authentication "
+                        f"Endpoint '{code_ep.identifier}' is documented as requiring authentication "
                         "(auth_required: true), but has no auth decorators in code."
                     )
                 ))
@@ -48,7 +43,7 @@ class SecurityDriftService:
                     drift_type="missing_auth_in_doc",
                     severity="CRITICAL",
                     description=(
-                        f"Endpoint '{code_ep.method} {code_ep.path}' requires authentication in code via decorators, "
+                        f"Endpoint '{code_ep.identifier}' requires authentication in code via decorators, "
                         "but is documented as public (auth_required: false)."
                     )
                 ))
@@ -64,7 +59,7 @@ class SecurityDriftService:
                     drift_type="undocumented_endpoint",
                     severity="WARNING",
                     description=(
-                        f"Authenticated endpoint '{code_ep.method} {code_ep.path}' exists in code with auth decorators, "
+                        f"Authenticated endpoint '{code_ep.identifier}' exists in code with auth decorators, "
                         "but is completely missing from documentation."
                     )
                 ))

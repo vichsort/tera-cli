@@ -32,7 +32,7 @@ class GraphService:
                 tag=tag,
             )
             nodes.append(node)
-            node_map[(ep.method, ep.path)] = node
+            node_map[ep.key] = node
 
         edges: List[GraphEdge] = []
         added_edge_keys: Set[Tuple[str, str, Optional[str]]] = set()
@@ -57,8 +57,8 @@ class GraphService:
                     m = item_pattern.match(other.path)
                     if m:
                         param_name = m.group(1)
-                        src_node = node_map.get((ep.method, ep.path))
-                        tgt_node = node_map.get((other.method, other.path))
+                        src_node = node_map.get(ep.key)
+                        tgt_node = node_map.get(other.key)
                         if src_node and tgt_node:
                             add_edge(src_node.id, tgt_node.id, f"creates {{{param_name}}}")
 
@@ -71,8 +71,8 @@ class GraphService:
                     if not suffix.startswith("{"):
                         if ep.method in ("GET", "POST"):
                             sub_label = f"subresource /{suffix.split('/')[0]}"
-                            src_node = node_map.get((ep.method, ep.path))
-                            tgt_node = node_map.get((other.method, other.path))
+                            src_node = node_map.get(ep.key)
+                            tgt_node = node_map.get(other.key)
                             if src_node and tgt_node:
                                 add_edge(src_node.id, tgt_node.id, sub_label)
 
@@ -82,8 +82,8 @@ class GraphService:
                 clean_base = ep.path.rstrip("/")
                 for other in schema.endpoints:
                     if other.method == "GET" and "{" in other.path and other.path.startswith(clean_base + "/"):
-                        src_node = node_map.get((ep.method, ep.path))
-                        tgt_node = node_map.get((other.method, other.path))
+                        src_node = node_map.get(ep.key)
+                        tgt_node = node_map.get(other.key)
                         if src_node and tgt_node:
                             add_edge(src_node.id, tgt_node.id, "item of")
 
