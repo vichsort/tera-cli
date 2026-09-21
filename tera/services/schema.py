@@ -30,3 +30,4 @@ def export_ir_json_schema(output_path: Optional[Path] = None, indent: int = 2) -
         with open(output_path, "w", encoding="utf-8") as f:
             f.write(content + "\n")
     return content
+

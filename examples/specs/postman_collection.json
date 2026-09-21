@@ -1,0 +1,43 @@
+{
+  "info": {
+    "name": "E-Commerce Sample Collection",
+    "description": "Postman Collection v2.1 for demonstrating tera import",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "https://api.example.com/health",
+          "protocol": "https",
+          "host": ["api", "example", "com"],
+          "path": ["health"]
+        },
+        "description": "Verifies service health"
+      }
+    },
+    {
+      "name": "Get User",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "https://api.example.com/users/:id",
+          "protocol": "https",
+          "host": ["api", "example", "com"],
+          "path": ["users", ":id"],
+          "variable": [
+            {
+              "key": "id",
+              "value": "1"
+            }
+          ]
+        },
+        "description": "Retrieves user record by ID"
+      }
+    }
+  ]
+}

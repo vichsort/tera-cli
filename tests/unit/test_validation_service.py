@@ -73,3 +73,4 @@ def test_validation_service_schema_error(tmp_path: Path) -> None:
     assert len(report.errors) > 0
     locs = [err.location for err in report.errors]
     assert any("name" in loc for loc in locs) or any("api" in loc for loc in locs)
+

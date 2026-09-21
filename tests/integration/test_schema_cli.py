@@ -26,3 +26,4 @@ def test_schema_cli_output_file(tmp_path: Path) -> None:
     assert "exported to" in result.output
     data = cast(Dict[str, Any], json.loads(out_file.read_text(encoding="utf-8")))
     assert data["title"] == "TeraCanonicalIR"
+

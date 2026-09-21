@@ -1,0 +1,94 @@
+# yaml-language-server: $schema=../../schemas/tera-schema.json
+api:
+  name: "E-Commerce Users API"
+  version: "1.0.0"
+  description: "User management and authentication service."
+  base_url: "/"
+  auth:
+    type: "bearer"
+
+endpoints:
+  - path: "/health"
+    method: "GET"
+    summary: "Health Check"
+    description: "Verifies service health status."
+    auth_required: false
+    responses:
+      success:
+        status: 200
+        description: "Service is healthy"
+        example:
+          status: "healthy"
+
+  - path: "/users/{user_id}"
+    method: "GET"
+    summary: "Get User by ID"
+    description: "Retrieves user record by unique identifier."
+    auth_required: false
+    params:
+      path:
+        - name: "user_id"
+          type: "integer"
+          required: true
+          description: "Numeric user identifier"
+    responses:
+      success:
+        status: 200
+        description: "User found"
+        example:
+          id: 1
+          name: "Alice"
+          role: "admin"
+
+  - path: "/users"
+    method: "POST"
+    summary: "Create User"
+    description: "Registers a new user record."
+    auth_required: true
+    body:
+      - name: "name"
+        type: "string"
+        required: true
+        description: "Full name"
+        example: "Bob"
+      - name: "email"
+        type: "string"
+        required: true
+        description: "Email address"
+        example: "bob@example.com"
+      - name: "role"
+        type: "string"
+        required: false
+        description: "Account role"
+        example: "member"
+    responses:
+      success:
+        status: 201
+        description: "User created"
+        example:
+          id: 42
+          name: "Bob"
+          email: "bob@example.com"
+      errors:
+        - status: 400
+          message: "Bad Request"
+          description: "Validation error in request payload"
+
+  - path: "/users/{user_id}"
+    method: "DELETE"
+    summary: "Delete User"
+    description: "Removes user from the database."
+    auth_required: true
+    params:
+      path:
+        - name: "user_id"
+          type: "integer"
+          required: true
+          description: "Numeric user identifier"
+    responses:
+      success:
+        status: 200
+        description: "User deleted"
+        example:
+          deleted: true
+          id: 42

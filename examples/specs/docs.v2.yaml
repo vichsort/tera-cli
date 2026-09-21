@@ -1,0 +1,116 @@
+# yaml-language-server: $schema=../../schemas/tera-schema.json
+api:
+  name: "E-Commerce Users API"
+  version: "2.0.0"
+  description: "User management, authentication and order integration service."
+  base_url: "/v2"
+  auth:
+    type: "bearer"
+
+endpoints:
+  - path: "/health"
+    method: "GET"
+    summary: "Health Check"
+    description: "Verifies service health status."
+    auth_required: false
+    responses:
+      success:
+        status: 200
+        description: "Service is healthy"
+        example:
+          status: "healthy"
+
+  - path: "/users/{user_id}"
+    method: "GET"
+    summary: "Get User by ID"
+    description: "Retrieves user record with optional profile inclusion."
+    auth_required: false
+    params:
+      path:
+        - name: "user_id"
+          type: "integer"
+          required: true
+          description: "Numeric user identifier"
+      query:
+        - name: "include_profile"
+          type: "boolean"
+          required: false
+          description: "Whether to include full profile data"
+    responses:
+      success:
+        status: 200
+        description: "User found"
+        example:
+          id: 1
+          name: "Alice"
+          role: "admin"
+
+  - path: "/users"
+    method: "POST"
+    summary: "Create User"
+    description: "Registers a new user record."
+    auth_required: true
+    body:
+      - name: "name"
+        type: "string"
+        required: true
+        description: "Full name"
+        example: "Bob"
+      - name: "email"
+        type: "string"
+        required: true
+        description: "Email address"
+        example: "bob@example.com"
+      - name: "role"
+        type: "string"
+        required: false
+        description: "Account role"
+        example: "member"
+    responses:
+      success:
+        status: 201
+        description: "User created"
+        example:
+          id: 42
+          name: "Bob"
+          email: "bob@example.com"
+      errors:
+        - status: 400
+          message: "Bad Request"
+          description: "Validation error in request payload"
+
+  - path: "/users/{user_id}"
+    method: "PATCH"
+    summary: "Update User"
+    description: "Partially updates an existing user."
+    auth_required: true
+    params:
+      path:
+        - name: "user_id"
+          type: "integer"
+          required: true
+          description: "Numeric user identifier"
+    body:
+      - name: "name"
+        type: "string"
+        required: false
+        description: "New name"
+    responses:
+      success:
+        status: 200
+        description: "User updated"
+        example:
+          id: 1
+          name: "Alice Updated"
+
+  - path: "/orders"
+    method: "GET"
+    summary: "List Orders"
+    description: "Retrieves customer order history."
+    auth_required: true
+    responses:
+      success:
+        status: 200
+        description: "Orders list"
+        example:
+          orders: []

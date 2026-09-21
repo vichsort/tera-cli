@@ -29,3 +29,4 @@ def test_export_ir_json_schema_to_file(tmp_path: Path) -> None:
 
     assert out_file.exists()
     assert out_file.read_text(encoding="utf-8").strip() == content.strip()
+
