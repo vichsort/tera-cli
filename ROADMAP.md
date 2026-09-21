@@ -105,6 +105,10 @@ Pesquisado e confirmado durante a sessão:
 | Driver de import de OpenAPI existente (`tera import`) | Lê `openapi.json/yaml` (OpenAPI 3.0/3.1 e Swagger 2.0) e converte pro IR canônico `docs.yaml` | Concluído (`[x]`) |
 | Servidor de documentação local (`tera serve`) | Servidor HTTP nativo servindo Swagger UI e Redoc com hot-reload automático por `mtime` | Concluído (`[x]`) |
 | Driver de revisões Git (`GitFileDriver`) | Carrega especificações diretamente do histórico Git (`git:HEAD~1:docs.yaml`, `HEAD:spec.json`) com suporte a OpenAPI | Concluído (`[x]`) |
+| `FastApiDriver` (Tier 1) | Ingestão nativa de apps FastAPI via `app.openapi()` sem dependência direta do framework | Concluído (`[x]`) |
+| `HttpDriver` (Tier 1) | Leitura remota de specs (OpenAPI, docs.yaml, Postman) via `http://` e `https://` com auth | Concluído (`[x]`) |
+| `PostmanCollectionDriver` (Tier 1) | Ingestão multi-versão de coleções Postman (v1.0, v2.0, v2.1, v3) com normalizer pattern | Concluído (`[x]`) |
+| `HarDriver` (Tier 1) | Engenharia reversa de tráfego HTTP Archive (.har) com normalização heurística de rotas dinâmicas | Concluído (`[x]`) |
 
 ---
 
@@ -133,15 +137,35 @@ Executada em 3 etapas cirúrgicas para consolidar a escalabilidade do projeto:
 
 ## 6. Estado Atual de Validação e Qualidade
 
-- **Suíte de Testes**: 104 testes automatizados (unitários e de integração), 100% passando em ~1.3s.
+- **Suíte de Testes**: 156 testes automatizados (unitários e de integração), 100% passando em ~1.5s.
 - **Tipagem Estrita**: Pyright configurado no modo `strict` com 0 erros e 0 warnings.
 - **Clean Architecture**: Domínio desacoplado de frameworks de apresentação e infraestrutura externa.
 
 ---
 
-## 7. Próximos Passos Sugeridos (Distribuição & Ecossistema)
+## 7. Arquitetura de Extensibilidade & Plugins (Estratégia 3 Tiers)
 
-1. [ ] **Pre-commit hook oficial**: Empacotar `tera lint` como hook do `pre-commit`.
-2. [ ] **GitHub Action oficial**: Criar action (`uses: vichsort/tera-action@v1`) para rodar `lint`, `coverage` e `diff` em pull requests.
-3. [ ] **Sistema de plugins via `entry_points`**: Permitir drivers/writers de terceiros (ex.: FastAPI, Django REST Framework).
+Adoção do princípio *Batteries-Included, Extensible via Plugins* para preservar DevX sem fragmentação por micro-pacotes:
 
+1. **Tier 1 — Core "Zero-Install" (Embutido)**:
+   - Funciona imediatamente via `pip install tera-cli`, sem downloads adicionais.
+   - Formatos: OpenAPI, YAML/JSON canônico, Git, HTTP/HTTPS, Postman (v1/v2/v3), HAR, Flask, FastAPI.
+2. **Tier 2 — Extras Oficiais (Lazy Dependencies)**:
+   - Dependências pesadas gerenciadas no monorepo e instaladas sob demanda (`pip install "tera-cli[django]"`).
+3. **Tier 3 — Plugins Externos / Enterprise (Escape Hatch)**:
+   - Descoberta via `importlib.metadata.entry_points(group="tera.plugins")` e configuração de scripts locais via `tera.toml`.
+   - Permite drivers corporativos proprietários e regras de linting customizadas sem forkar o projeto.
+
+---
+
+## 8. Próximos Passos (Extensibilidade, Drivers & Ecossistema)
+
+1. [x] **Refatoração do Core**: Substituir `factory.py` por `DriverRegistry` e `WriterRegistry` unificados.
+2. [x] **`FastApiDriver`**: Ingestão de instâncias FastAPI via `app.openapi()` e auto-detecção em `module:attr`.
+3. [x] **`HttpDriver`**: Ingestão de especificações remotas via HTTP/HTTPS com suporte a headers de autenticação.
+4. [x] **`PostmanCollectionDriver`**: Normalizer multi-versão suportando schemas v1.0, v2.0, v2.1 e v3.
+5. [x] **`HarDriver`**: Parser de arquivos `.har` com colapso heurístico de rotas dinâmicas (`/users/{id}`) e inferência de payload.
+6. [ ] **Sistema de Plugins via Entry Points (Tier 3)**: Descoberta dinâmica de extensões via grupo `tera.plugins`.
+7. [ ] **Suporte a Plugins Locais**: Carregamento de extensões locais declaradas no `tera.toml`.
+8. [ ] **Pre-commit hook oficial**: Empacotar `tera lint` como hook do `pre-commit`.
+9. [ ] **GitHub Action oficial**: Criar action (`uses: vichsort/tera-action@v1`) para CI gates.
