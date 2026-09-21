@@ -58,3 +58,4 @@ def delete_user(user_id: int) -> Any:
     Protected destructive mutation.
     """
     return jsonify({"deleted": True, "id": user_id}), 200
+

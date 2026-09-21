@@ -92,3 +92,4 @@ endpoints:
         example:
           deleted: true
           id: 42
+
