@@ -81,76 +81,67 @@ Pesquisado e confirmado durante a sessão:
 
 ### Motor central (tudo nasce do diff semântico entre versões do IR)
 
-| Título | Descrição | Utilidade | Surpresa |
-
-|---|---|---|---|
-
-| Diff semântico entre versões | Compara duas árvores do `docs.yaml`, classifica mudanças (adição/remoção/tipo/obrigatoriedade) | 5 | 4 |
-| Lint como CI gate (fail-on-drift) | Se o diff não for vazio no CI, quebra o build | 5 | 4 |
-| Self-healing (PR automático) | Merge seguro dos campos estruturais + PR automático; campos semânticos ficam marcados `NEEDS REVIEW` pra humano decidir | 5 | 5 |
-| Changelog automático | Gera entrada de CHANGELOG.md a partir do diff | 4 | 4 |
-| Sugestão de semver | Sugere patch/minor/major com base no diff | 4 | 5 |
-| Modo história da API (timeline) | `git log` + diff entre versões, virando timeline visual | 3 | 5 |
-
-**Nota técnica do self-healing**: nunca sobrescrever tudo automaticamente. Separar campos **estruturais** (path, method, tipos/obrigatoriedade de parâmetros — vêm da AST, seguros pra auto-merge) de campos **semânticos** (summary, description, auth_required — podem ter intenção humana; marcar como pendente de revisão em vez de sobrescrever). Idempotência: sempre commitar na mesma branch (`tera/auto-sync`) com force-push, nunca criar branch nova a cada execução.
+| Título | Descrição | Status |
+|---|---|---|
+| Diff semântico entre versões (`tera diff`) | Compara duas árvores do `docs.yaml`, classifica mudanças (adição/remoção/tipo/obrigatoriedade) e breaking changes | Concluído (`[x]`) |
+| Lint como CI gate (fail-on-drift) | Suporte a `--fail-on-drift` e `--fail-on-breaking` no CLI | Concluído (`[x]`) |
+| Self-healing (`tera sync`) | Merge seguro de campos estruturais da AST preservando anotações humanas (`description`, `example`), com `--write` e `--prune` | Concluído (`[x]`) |
+| Changelog automático (`tera changelog`) | Gera release notes no formato Keep a Changelog a partir do diff, com exportação e append | Concluído (`[x]`) |
+| Sugestão de semver (`tera semver`) | Sugere patch/minor/major com base no diff estrutural e aplica bump no `docs.yaml` via `--bump` | Concluído (`[x]`) |
 
 ### Qualidade e estrutura (independentes do diff)
 
-| Título | Descrição | Utilidade | Surpresa |
-
-|---|---|---|---|
-
-| Detector de drift de segurança | Cruza `auth_required` do IR com decorators reais do código | 5 | 5 |
-| Doc coverage report | % de endpoints com descrição/exemplo/erros documentados | 4 | 4 |
-| Grafo de dependência entre endpoints | AST detecta endpoints que compartilham modelo/se chamam; renderiza como Mermaid | 4 | 5 |
-| Detector de inconsistência (sem LLM) | Regras estruturais: verbo do summary vs. method HTTP; status code vs. texto da descrição; singular/plural vs. tipo do example. **Não depende só de LLM** — cobre os erros mais comuns sem custo de API. | 4 | 3 |
+| Título | Descrição | Status |
+|---|---|---|
+| Detector de drift de segurança (`tera security`) | Cruza `auth_required` da documentação com decorators reais do código Flask (`@jwt_required`, `@login_required`), com flag `--fail-on-drift` | Concluído (`[x]`) |
+| Doc coverage report (`tera coverage`) | % de endpoints com summaries, descrições, parâmetros, body e erros documentados, com gating `--min-coverage` | Concluído (`[x]`) |
+| Grafo de dependência entre endpoints (`tera graph`) | Constrói grafo de dependência arquitetural (CRUD lifecycle, sub-recursos, hierarquia) e exporta em Mermaid (`flowchart TD/LR`) | Concluído (`[x]`) |
+| Auditoria de inconsistências semânticas (`tera audit`) | Regras determinísticas sem LLM (`INC001` a `INC004`), score percentual de coerência e modo `--strict` para CI | Concluído (`[x]`) |
 
 ### Entrada e saída (drivers/writers)
 
-| Título | Descrição | Utilidade | Surpresa |
-
-|---|---|---|---|
-
-| Driver de import de OpenAPI existente | Lê `openapi.json/yaml` pronto, converte pro IR | 5 | 2 |
-| `tera serve` | Embute Redoc/Swagger UI estático, serve local a partir do `docs.yaml` | 5 | 3 |
-
-### Distribuição e adoção
-
-| Título | Descrição | Utilidade | Surpresa |
-
-|---|---|---|---|
-
-| Pre-commit hook oficial | `tera lint` empacotado como hook | 3 | 2 |
-| GitHub Action oficial | `uses: vichsort/tera-action@v1` roda lint/build em qualquer repo | 4 | 2 |
-| Sistema de plugins via `entry_points` | Terceiros publicam drivers/writers como pacotes pip próprios | 4 | 3 |
-| Faker nos exemplos | Troca exemplos genéricos por dados realistas via Faker | 3 | 3 |
+| Título | Descrição | Status |
+|---|---|---|
+| Driver de import de OpenAPI existente (`tera import`) | Lê `openapi.json/yaml` (OpenAPI 3.0/3.1 e Swagger 2.0) e converte pro IR canônico `docs.yaml` | Concluído (`[x]`) |
+| Servidor de documentação local (`tera serve`) | Servidor HTTP nativo servindo Swagger UI e Redoc com hot-reload automático por `mtime` | Concluído (`[x]`) |
+| Driver de revisões Git (`GitFileDriver`) | Carrega especificações diretamente do histórico Git (`git:HEAD~1:docs.yaml`, `HEAD:spec.json`) com suporte a OpenAPI | Concluído (`[x]`) |
 
 ---
 
-## 5. Cortado do escopo (e por quê)
+## 5. Refatoração e Padronização Arquitetural (DRY & SOLID)
 
-| Ideia | Motivo do corte |
+Executada em 3 etapas cirúrgicas para consolidar a escalabilidade do projeto:
 
-|---|---|
+1. **Etapa 1: Enriquecimento do Domínio & Unificação de `BaseField`**:
+   - `EndpointParams`: propriedade `all_params` unificando parâmetros.
+   - `Endpoint`: validador para normalização de métodos HTTP (`GET`), propriedades `key` e `identifier`.
+   - `TeraSchema`: índice `endpoint_map` e método de busca `get_endpoint`.
+   - Unificação da mesclagem de coleções de campos (`_merge_field_list`) no `SyncService` e da comparação de campos (`_compare_fields`) no `DiffService`.
 
-| Fuzz/gerador de ataque a partir do schema | Schemathesis já faz isso, maduro e mantido |
-| Mock server generator / contract test runner | Prism já faz os dois a partir de OpenAPI |
-| Tradutor de doc pra outra stack / gerador de SDK | OpenAPI Generator já cobre dezenas de linguagens |
-| `tera explain`, `tera roast`, detector semântico via LLM | Usuário pediu explicitamente: nada que dependa de LLM ou gere custo recorrente |
-| Rastreador de "API zumbi" (cruzar com logs de acesso) | Válido, mas precisa de infra externa (acesso a logs) — não é "imediato" |
-| Agregador multi-repo (portal único de docs) | Válido, mas precisa de portal hospedado — não é "imediato" |
+2. **Etapa 2: Unificação de Drivers e Ingestão (`TeraDriver`)**:
+   - Criação do `GitFileDriver` sob o contrato `TeraDriver` para histórico Git.
+   - Padronização de `YamlFileDriver` (alias `TeraFileDriver`) para carregar YAML e JSON via `FileLoader`.
+   - Desambiguação centralizada na fábrica `get_driver` (OpenAPI, Flask, Tera e Git).
+   - Redução de `load_schema_from_source` para fachada de ~20 linhas.
 
----
-
-## 6. Ordem sugerida de execução
-
-1. [x] Checklist de fundação (seção 2) — base estabilizada, bugs corrigidos e modo strict de tipagem habilitado.
-2. [x] `tera diff` (motor central) — comparação semântica entre versões, classificação de breaking changes e suporte a CI (`--fail-on-breaking`, `--fail-on-drift`).
-3. [x] A partir do diff: `tera changelog` (concluído), `tera semver` (concluído), `tera sync` (self-healing concluído).
-4. [x] Features independentes: `tera security` (detector de drift concluído), `tera coverage` (auditoria de completude concluída).
-5. [x] Entrada & Visualização (Etapa 1): `tera import` (OpenApiDriver concluído), `tera serve` (servidor HTTP local Swagger UI/Redoc concluído).
-6. [x] Auditoria & Estrutura (Etapa 2): `tera graph` (grafo relacional Mermaid concluído), `tera audit` (auditoria determinística de inconsistências sem LLM concluída).
+3. **Etapa 3: Desacoplamento da Apresentação CLI & Padronização de Erros**:
+   - Criação de `tera/cli/presenters.py` isolando 100% da renderização visual de terminal, cores, formatação e JSON (SRP).
+   - Redução de `tera/cli/commands.py` de 1.052 para ~540 linhas.
+   - Helper `_load_schema_or_exit` eliminando mais de 150 linhas de blocos `try/except` idênticos.
 
 ---
 
-*Gerado a partir de uma sessão de planejamento em 21/09/2026. Se algo aqui parecer desatualizado em relação ao código real, o código manda — este arquivo é só o mapa da conversa, não a fonte de verdade do projeto.*
+## 6. Estado Atual de Validação e Qualidade
+
+- **Suíte de Testes**: 104 testes automatizados (unitários e de integração), 100% passando em ~1.3s.
+- **Tipagem Estrita**: Pyright configurado no modo `strict` com 0 erros e 0 warnings.
+- **Clean Architecture**: Domínio desacoplado de frameworks de apresentação e infraestrutura externa.
+
+---
+
+## 7. Próximos Passos Sugeridos (Distribuição & Ecossistema)
+
+1. [ ] **Pre-commit hook oficial**: Empacotar `tera lint` como hook do `pre-commit`.
+2. [ ] **GitHub Action oficial**: Criar action (`uses: vichsort/tera-action@v1`) para rodar `lint`, `coverage` e `diff` em pull requests.
+3. [ ] **Sistema de plugins via `entry_points`**: Permitir drivers/writers de terceiros (ex.: FastAPI, Django REST Framework).
+
