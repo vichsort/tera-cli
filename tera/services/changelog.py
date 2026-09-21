@@ -97,3 +97,4 @@ class ChangelogService:
             new_content = f"{existing_content.rstrip()}\n\n{markdown_entry}\n"
 
         changelog_path.write_text(new_content, encoding="utf-8")
+

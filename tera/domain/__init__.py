@@ -32,6 +32,9 @@ from .semver import (
 )
 
 from .changelog import ChangelogSection
+from .sync import SyncResult
+from .coverage import EndpointCoverage, CoverageReport
+from .security import DriftType, SecuritySeverity, SecurityIssue, SecurityDriftReport
 
 __all__ = [
     "TeraSchema",
@@ -56,4 +59,11 @@ __all__ = [
     "SemverBump",
     "SemverResult",
     "ChangelogSection",
+    "SyncResult",
+    "EndpointCoverage",
+    "CoverageReport",
+    "DriftType",
+    "SecuritySeverity",
+    "SecurityIssue",
+    "SecurityDriftReport",
 ]

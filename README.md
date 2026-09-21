@@ -36,6 +36,9 @@ Built with Clean Architecture principles and strict layer isolation:
   - `DiffService`: Semantic schema comparison and breaking change detection.
   - `SemverService`: Semantic version recommendation and version bumping.
   - `ChangelogService`: Automated Keep a Changelog generator.
+  - `SyncService`: Self-healing synchronization merging AST reflection with human docs.
+  - `CoverageService`: Documentation completeness and metric reporting.
+  - `SecurityDriftService`: Security decorator auditing and drift detection.
 - **`cli`**: Subcommands powered by Typer.
 
 ---
@@ -165,6 +168,54 @@ tera changelog docs.v1.yaml docs.v2.yaml --append
 
 # Output structured JSON
 tera changelog docs.v1.yaml docs.v2.yaml --json
+```
+
+### 9. `sync`
+
+Self-healing synchronization: performs a safe merge of code AST reflection with existing documentation. Technical structures (routes, methods, parameters, types, body) are updated from code, while human-written metadata (summaries, descriptions, tags, examples, error responses) are strictly preserved.
+
+```bash
+# Preview sync changes (dry-run)
+tera sync main:app --doc docs.yaml
+
+# Apply and overwrite docs.yaml with merged schema
+tera sync main:app --doc docs.yaml --write
+
+# Prune endpoints that no longer exist in code
+tera sync main:app --doc docs.yaml --write --prune
+
+# Output sync result as JSON
+tera sync main:app --doc docs.yaml --json
+```
+
+### 10. `coverage`
+
+Audits API documentation completeness across summaries, descriptions, parameter explanations, payload models, and error responses.
+
+```bash
+# View documentation coverage report
+tera coverage docs.yaml
+
+# Fail in CI if documentation coverage is below 80%
+tera coverage docs.yaml --min-coverage 80
+
+# Output coverage metrics as JSON
+tera coverage docs.yaml --json
+```
+
+### 11. `security`
+
+Audits security drift by comparing AST decorators in code (e.g. `@jwt_required`, `@login_required`) against `auth_required` contracts in the documentation.
+
+```bash
+# Audit security drift
+tera security main:app --doc docs.yaml
+
+# CI security gate: fail if any security drift is detected
+tera security main:app --doc docs.yaml --fail-on-drift
+
+# Output security drift report as JSON
+tera security main:app --doc docs.yaml --json
 ```
 
 ---

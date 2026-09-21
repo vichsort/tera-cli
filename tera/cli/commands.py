@@ -12,7 +12,10 @@ from tera.services import (
     DiffService, 
     load_schema_from_source, 
     SemverService,
-    ChangelogService
+    ChangelogService,
+    SyncService,
+    CoverageService,
+    SecurityDriftService
 )
 from tera.exceptions import TeraError
 from tera.domain import LintSeverity, LintIssue, SchemaDiff, SemverResult
@@ -515,3 +518,262 @@ def changelog(
 
     if not output_file and not append:
         typer.echo(md_output)
+
+@app.command()
+def sync(
+    app_id: Optional[str] = typer.Argument(
+        None,
+        help="Import string (e.g. 'main:app'). If empty, reads 'target' from .teraconfig.toml"
+    ),
+    doc_file: Path = typer.Option(
+        Path("docs.yaml"),
+        "--doc", "-d",
+        help="Path to the documentation file to synchronize. Default: docs.yaml"
+    ),
+    write: bool = typer.Option(
+        False,
+        "--write", "-w",
+        help="Overwrite the documentation file with the synchronized schema."
+    ),
+    prune: bool = typer.Option(
+        False,
+        "--prune",
+        help="Remove endpoints present in docs.yaml that are no longer present in code."
+    ),
+    to_json: bool = typer.Option(
+        False,
+        "--json", "-j",
+        help="Output sync result as JSON."
+    )
+) -> None:
+    """
+    Self-healing synchronization: merges code AST reflection with existing documentation,
+    updating technical structure while preserving human summaries, descriptions, and examples.
+    """
+    config = loader.load_config()
+    final_target = app_id or config.target
+
+    if not final_target:
+        _print_error(
+            "Missing Target",
+            "Please provide an app string (e.g. 'tera sync main:app') OR set 'target' in .teraconfig.toml"
+        )
+        raise typer.Exit(code=1)
+
+    try:
+        driver = factory.get_driver(final_target)
+        code_schema = driver.load()
+    except Exception as e:
+        _print_error("Code Scan Failed", str(e))
+        raise typer.Exit(code=1)
+
+    try:
+        doc_schema = load_schema_from_source(doc_file)
+    except FileNotFoundError as e:
+        _print_error("Doc File Not Found", str(e))
+        raise typer.Exit(code=1)
+    except Exception as e:
+        _print_error("Error Loading Doc File", str(e))
+        raise typer.Exit(code=1)
+
+    service = SyncService()
+    result = service.sync(code_schema, doc_schema, prune=prune)
+
+    if to_json:
+        typer.echo(json.dumps(result.model_dump(), indent=2))
+        return
+
+    typer.echo("")
+    typer.secho("🔄 Self-Healing Sync Report", fg=typer.colors.BLUE, bold=True)
+    typer.echo(f"  Code target:       {final_target}")
+    typer.echo(f"  Doc specification: {doc_file}")
+    typer.echo("")
+
+    if result.endpoints_added:
+        typer.secho(f"  + {len(result.endpoints_added)} endpoint(s) added from code:", fg=typer.colors.GREEN, bold=True)
+        for ep in result.endpoints_added:
+            typer.secho(f"      + {ep}", fg=typer.colors.GREEN)
+        typer.echo("")
+
+    if result.endpoints_updated:
+        typer.secho(f"  ~ {len(result.endpoints_updated)} endpoint(s) updated structurally:", fg=typer.colors.YELLOW, bold=True)
+        for ep in result.endpoints_updated:
+            typer.secho(f"      ~ {ep}", fg=typer.colors.YELLOW)
+        typer.echo("")
+
+    if result.endpoints_orphaned:
+        typer.secho(f"  ⚠️  {len(result.endpoints_orphaned)} orphaned endpoint(s) missing from code (retained):", fg=typer.colors.MAGENTA, bold=True)
+        for ep in result.endpoints_orphaned:
+            typer.secho(f"      ? {ep}", fg=typer.colors.MAGENTA)
+        typer.echo("      Tip: run with --prune to remove orphaned endpoints.")
+        typer.echo("")
+
+    if result.endpoints_pruned:
+        typer.secho(f"  - {len(result.endpoints_pruned)} orphaned endpoint(s) pruned:", fg=typer.colors.RED, bold=True)
+        for ep in result.endpoints_pruned:
+            typer.secho(f"      - {ep}", fg=typer.colors.RED)
+        typer.echo("")
+
+    typer.secho(f"  ✓ {result.annotations_preserved} human annotation(s) preserved.", fg=typer.colors.CYAN, bold=True)
+    typer.echo("")
+
+    if write:
+        try:
+            writer = factory.get_writer(doc_file, format_style='tera')
+            writer.write(result.merged_schema)
+            typer.secho(f"✅ Successfully wrote synchronized schema to '{doc_file}'\n", fg=typer.colors.GREEN, bold=True)
+        except Exception as e:
+            _print_error("Write Error", f"Could not write synchronized schema: {e}")
+            raise typer.Exit(code=1)
+    else:
+        typer.secho("ℹ️  Dry-run complete. Run with --write (-w) to update the file.\n", fg=typer.colors.BRIGHT_BLACK)
+
+@app.command()
+def coverage(
+    file_path: Path = typer.Argument(
+        Path("docs.yaml"),
+        help="Path to the documentation file to analyze. Default: docs.yaml"
+    ),
+    min_coverage: Optional[float] = typer.Option(
+        None,
+        "--min-coverage", "-m",
+        help="Minimum required coverage percentage (0-100). Fails with code 1 if below threshold."
+    ),
+    to_json: bool = typer.Option(
+        False,
+        "--json", "-j",
+        help="Output coverage report as JSON."
+    )
+) -> None:
+    """
+    Analyzes API documentation completeness (summaries, descriptions, parameters, body fields, error responses).
+    """
+    try:
+        schema = load_schema_from_source(file_path)
+    except FileNotFoundError as e:
+        _print_error("File Not Found", str(e))
+        raise typer.Exit(code=1)
+    except TeraError as e:
+        _print_error(e.title, e.message)
+        raise typer.Exit(code=1)
+    except Exception as e:
+        _print_error("Error Loading Specification", str(e))
+        raise typer.Exit(code=1)
+
+    service = CoverageService()
+    report = service.calculate_coverage(schema)
+
+    if to_json:
+        typer.echo(json.dumps(report.model_dump(), indent=2))
+    else:
+        typer.echo("")
+        typer.secho(f"📊 Documentation Coverage Report: '{file_path}'", fg=typer.colors.BLUE, bold=True)
+        typer.echo(f"  Analyzed {report.total_endpoints} endpoint(s)\n")
+
+        for ep in report.endpoints:
+            score_color = typer.colors.GREEN if ep.score >= 80 else (typer.colors.YELLOW if ep.score >= 50 else typer.colors.RED)
+            typer.secho(f"  {ep.method} {ep.path} — {ep.score}%", fg=score_color, bold=True)
+            for missing in ep.missing_items:
+                typer.secho(f"    - {missing}", fg=typer.colors.BRIGHT_BLACK)
+
+        typer.echo("")
+        typer.secho("Summary Stats:", fg=typer.colors.CYAN, bold=True)
+        typer.echo(f"  Summaries documented:       {report.summaries_score}%")
+        typer.echo(f"  Descriptions documented:    {report.descriptions_score}%")
+        typer.echo(f"  Parameters documented:      {report.params_score}%")
+        typer.echo(f"  Body fields documented:     {report.body_score}%")
+        typer.echo(f"  Error responses documented: {report.errors_score}%")
+        typer.echo("")
+
+        overall_color = typer.colors.GREEN if report.overall_score >= 80 else (typer.colors.YELLOW if report.overall_score >= 50 else typer.colors.RED)
+        typer.secho(f"Overall Documentation Coverage: {report.overall_score}%\n", fg=overall_color, bold=True)
+
+    if min_coverage is not None and report.overall_score < min_coverage:
+        if not to_json:
+            typer.secho(
+                f"❌ Coverage check failed: {report.overall_score}% is below required threshold of {min_coverage}%\n",
+                fg=typer.colors.RED,
+                bold=True
+            )
+        raise typer.Exit(code=1)
+
+@app.command()
+def security(
+    app_id: Optional[str] = typer.Argument(
+        None,
+        help="Import string (e.g. 'main:app'). If empty, reads 'target' from .teraconfig.toml"
+    ),
+    doc_file: Path = typer.Option(
+        Path("docs.yaml"),
+        "--doc", "-d",
+        help="Path to the documentation file to audit. Default: docs.yaml"
+    ),
+    fail_on_drift: bool = typer.Option(
+        False,
+        "--fail-on-drift",
+        help="Exit with code 1 if any security drift or discrepancy is detected."
+    ),
+    to_json: bool = typer.Option(
+        False,
+        "--json", "-j",
+        help="Output security drift report as JSON."
+    )
+) -> None:
+    """
+    Audits security drift by comparing AST decorators in code against documentation auth contracts.
+    """
+    config = loader.load_config()
+    final_target = app_id or config.target
+
+    if not final_target:
+        _print_error(
+            "Missing Target",
+            "Please provide an app string (e.g. 'tera security main:app') OR set 'target' in .teraconfig.toml"
+        )
+        raise typer.Exit(code=1)
+
+    try:
+        driver = factory.get_driver(final_target)
+        code_schema = driver.load()
+    except Exception as e:
+        _print_error("Code Scan Failed", str(e))
+        raise typer.Exit(code=1)
+
+    try:
+        doc_schema = load_schema_from_source(doc_file)
+    except FileNotFoundError as e:
+        _print_error("Doc File Not Found", str(e))
+        raise typer.Exit(code=1)
+    except Exception as e:
+        _print_error("Error Loading Doc File", str(e))
+        raise typer.Exit(code=1)
+
+    service = SecurityDriftService()
+    report = service.audit(code_schema, doc_schema)
+
+    if to_json:
+        typer.echo(json.dumps(report.model_dump(), indent=2))
+    else:
+        typer.echo("")
+        typer.secho("🛡️  Security Drift Audit Report", fg=typer.colors.BLUE, bold=True)
+        typer.echo(f"  Code target:       {final_target}")
+        typer.echo(f"  Doc specification: {doc_file}\n")
+
+        if not report.has_drift:
+            typer.secho("  ✅ No security drift detected. Code decorators match documentation auth contracts.\n", fg=typer.colors.GREEN, bold=True)
+        else:
+            for issue in report.issues:
+                severity_color = typer.colors.RED if issue.severity == "CRITICAL" else typer.colors.YELLOW
+                typer.secho(f"  [{issue.severity}] {issue.method} {issue.path}", fg=severity_color, bold=True)
+                typer.secho(f"     {issue.description}", fg=typer.colors.BRIGHT_BLACK)
+
+            typer.echo("")
+            summary_color = typer.colors.RED if report.critical_count > 0 else typer.colors.YELLOW
+            typer.secho(
+                f"Summary: {report.critical_count} critical issue(s), {report.warning_count} warning(s)\n",
+                fg=summary_color,
+                bold=True
+            )
+
+    if fail_on_drift and report.has_drift:
+        raise typer.Exit(code=1)

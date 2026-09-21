@@ -119,3 +119,4 @@ def test_cli_changelog_custom_version_and_date(tmp_path: Path) -> None:
     result = runner.invoke(app, ["changelog", str(base), str(head), "--version", "2.0.0", "--date", "2026-12-31"])
     assert result.exit_code == 0
     assert "## [2.0.0] - 2026-12-31" in result.stdout
+

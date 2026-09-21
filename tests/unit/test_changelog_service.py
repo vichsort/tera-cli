@@ -107,3 +107,4 @@ def test_append_to_file_new_and_existing(tmp_path: Path, base_spec: TeraSchema) 
     content2 = changelog_file.read_text(encoding="utf-8")
 
     assert content2.index("## [1.1.0]") < content2.index("## [1.0.0]")
+
