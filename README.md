@@ -1,63 +1,140 @@
 # tera-cli
-!!!!!!Ainda não é o README final!!!!!!!!  
-Apenas explicações para uma compreensão sobre a estrutura e abstração de tarefas. Isso deve me ajudar a manter o código limpo e organizado (se eu tiver sorte de lembrar hahaha)
 
+> **Documentation as Code Tool** — Canonical Intermediate Representation (IR) Hub for API Specifications.
+
+`tera-cli` is a developer-centric CLI designed to decouple API documentation inputs from outputs. Instead of translating directly from code to documentation, `tera` uses a canonical intermediate representation (`docs.yaml`) that can be scanned from code, written by hand, linted in CI, and exported into multiple formats.
+
+```text
+Flask App (scan) ─┐                    ┌─→ OpenAPI 3.0 (build)
+FastAPI (*)      ─┼─→  docs.yaml (IR) ─┼─→ Markdown Documentation (export)
+OpenAPI spec (*) ─┤                    ├─→ Interactive HTML / Redoc (export)
+Handcrafted YAML ─┘                    └─→ Postman Collection (export)
 ```
-├── 📁 tera
-│   ├── 📁 adapters
-│   │   └── 🐍 openapi.py
-│   ├── 📁 contracts
-│   │   ├── 🐍 drivers.py
-│   │   └── 🐍 writers.py
-│   ├── 📁 domain
-│   │   └── 🐍 models.py
-│   ├── 📁 drivers
-│   │   └── 🐍 yaml_driver.py
-│   ├── 📁 services
-│   │   └── 🐍 pipeline.py
-│   ├── 📁 writers
-│   │   └── 🐍 json_writer.py
-│   ├── 🐍 exceptions.py
-│   └── 🐍 main.py
-├── 📁 tests
-│   ├── 📁 integration
-│   │   ├── 🐍 test_cli.py
-│   │   └── 🐍 test_default_file.py
-│   ├── 📁 unit
-│   │   └── 🐍 test_converter.py
-│   └── 🐍 conftest.py
-├── ⚙️ .gitignore
-├── 📝 README.md
-└── 📄 requirements.txt
+
+---
+
+## Architecture
+
+Built with Clean Architecture principles and strict layer isolation:
+
+- **`domain`**: Pydantic models defining the canonical schema (`TeraSchema`, `Endpoint`, `ParamField`, `BodyField`). Completely agnostic of I/O, CLI, or serialization formats.
+- **`contracts`**: Python `Protocol` definitions (`TeraDriver`, `TeraWriter`, `TeraLinter`) enforcing input/output contracts.
+- **`drivers`**: Input ingestion layers:
+  - `YamlFileDriver`: Parses `docs.yaml` definitions into `TeraSchema`.
+  - `FlaskAppDriver`: AST static analysis and introspection of Flask routes, docstrings, security decorators, and Pydantic models.
+- **`adapters`**: Schema transformations (e.g., `TeraOpenApiAdapter` converting canonical schemas into OpenAPI 3.0.3 structures).
+- **`writers`**: Output format implementations:
+  - `JsonFileWriter`, `YamlFileWriter`: Tera IR outputs.
+  - `OpenApiJsonWriter`, `OpenApiYamlWriter`: OpenAPI 3.0 specs.
+  - `MarkdownWriter`: Human-readable markdown docs.
+  - `HtmlWriter`: Standalone Redoc HTML documentation.
+  - `PostmanWriter`: Postman Collection v2.1.
+- **`services`**: Core orchestration pipelines:
+  - `run_pipeline(driver, writer)`: Execution orchestrator.
+  - `InitService`: Project boilerplate generation.
+  - `LinterService`: Static syntax, schema, and semantic rule enforcement.
+- **`cli`**: Subcommands powered by Typer.
+
+---
+
+## Installation
+
+### From Source
+
+```bash
+git clone https://github.com/vichsort/tera-cli.git
+cd tera-cli
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
 ```
-## Estrutura Tera
-A estrutura visa separar ao máximo o sistema de entrada e saída, permitindo mudar QUALQUER COISA em QUALQUER LUGAR sem obrigando uma refatoração ou transformação total. Assim, separei cada trecho de lógica para que permita replicabilidade, escalabilidade ou modificação futura. Repare na estrutura e a separação de responsabilidade.
 
-### Domain
-Coração do sistema. Contém o TeraSchema e as definições do que é uma API, um Endpoint, etc. Ele não sabe ler arquivos, não sabe o que é JSON e não sabe o que é Typer. Ele apenas define a estrutura de dados válida do sistema usando Pydantic.
+---
 
-### Contracts
-Regras e protocolos de o que o sistema deve fazer (mas não como fazer)
-- `drivers.py`: Define que "todo Driver deve ter um método load()".
-- `writers.py`: Define que "todo Writer deve ter um método write()".
-Assim todo sistema depende que haja input e output, mas a forma é indiferente, permitindo eu mudar de item ingerido ou de forma que vai ser mandado o final.
+## Commands
 
-### Drivers
-Porta de entrada. Por enquanto tem só yaml, mas dá pra gente ver de colocar algo a mais... Como planejo ter um scanner junto, aqui vai ter ele - já que é uma ENTRADA.
+### 1. `init`
 
-### Services
-Serviços que nem todo sistema tem, mas no nosso caso são tipo maestros, que lidam com a forma que todo o sistema vai agir. Aqui tem a camada de aplicação (ou mais ou menos) que é o pipeline -> junta ***i** no **o** (driver/writer) sem saber o que exatamente faz, apenas realiza a ação, indiferente se vai ler yaml ou json e transformar em json ou yaml.
+Scaffolds a new documentation project with sample definitions and configuration.
 
-### Adapters
-Traduzem os nossos schemas pro dicionário que queremos (nesse momento OpenAPI 3.0). Ele encapsula a lógica do negócio e envia pro responsável.
+```bash
+tera init
+# Or generate an advanced boilerplate:
+tera init --complete
+```
 
-### Writers
-Mecanismos de output. Pega o resultado do adapter e efetivamente grava no disco.
+### 2. `scan`
 
-## Futuro:
-- Leitura de api
-- Scan
-- 'build'
-- Documentação
-- Mais testes
-- Deploy
+Extracts API schemas directly from application source code using AST and introspection without starting a live server.
+
+```bash
+tera scan my_app:app -o docs.yaml
+```
+
+### 3. `build`
+
+Compiles canonical `docs.yaml` into OpenAPI 3.0 specification.
+
+```bash
+tera build docs.yaml -o openapi.json
+```
+
+### 4. `lint`
+
+Performs static analysis on documentation definitions to ensure completeness, validity, and consistency.
+
+```bash
+# Human-readable output
+tera lint docs.yaml
+
+# JSON output for CI/CD gates
+tera lint docs.yaml --json
+```
+
+### 5. `export`
+
+Exports the canonical definition into target client or documentation formats.
+
+```bash
+# Standalone HTML (Redoc)
+tera export docs.yaml --format html -o docs.html
+
+# Markdown documentation
+tera export docs.yaml --format markdown -o API.md
+
+# Postman collection
+tera export docs.yaml --format postman -o collection.json
+```
+
+---
+
+## Configuration
+
+`tera` can be customized via `.teraconfig.toml`:
+
+```toml
+target = "main:app"
+output = "dist/openapi.json"
+format = "yaml"
+title = "My API"
+version = "1.0.0"
+
+[lint]
+ignore = ["SEM001"]
+```
+
+Ignore patterns for scanners can be configured in `.teraignore` (using gitignore syntax).
+
+---
+
+## Development & Testing
+
+```bash
+pytest -v
+```
+
+---
+
+## License
+
+MIT License. See [LICENSE](LICENSE) for details.
