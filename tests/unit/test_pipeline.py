@@ -19,3 +19,4 @@ def test_run_pipeline() -> None:
 
     mock_driver.load.assert_called_once()
     mock_writer.write.assert_called_once_with(schema)
+

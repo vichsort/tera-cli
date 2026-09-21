@@ -13,6 +13,7 @@ from tera.domain import (
     SecurityDriftReport,
     SemverResult,
     SyncResult,
+    ValidationReport,
 )
 
 
@@ -428,3 +429,30 @@ def present_audit_report(
             fg=summary_color,
             bold=True,
         )
+
+
+def present_validation_report(report: ValidationReport, as_json: bool = False) -> None:
+    """Renders validation report as human-readable colored report or JSON."""
+    if as_json:
+        print_json(report)
+        return
+
+    typer.echo("")
+    if report.is_valid:
+        typer.secho(
+            f"✅ '{report.file_path}' is a valid Tera specification.",
+            fg=typer.colors.GREEN,
+            bold=True,
+        )
+        typer.echo("")
+    else:
+        typer.secho(
+            f"❌ '{report.file_path}' failed schema validation ({len(report.errors)} error(s)):",
+            fg=typer.colors.RED,
+            bold=True,
+        )
+        for err in report.errors:
+            loc_str = f"[{err.location}] " if err.location else ""
+            typer.secho(f"   • {loc_str}{err.message} ({err.error_type})", fg=typer.colors.YELLOW)
+        typer.echo("")
+

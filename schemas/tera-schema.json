@@ -1,0 +1,437 @@
+{
+  "$defs": {
+    "ApiConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "version": {
+          "title": "Version",
+          "type": "string"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "base_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "/",
+          "title": "Base Url"
+        },
+        "auth": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AuthConfig"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ],
+      "title": "ApiConfig",
+      "type": "object"
+    },
+    "AuthConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "enum": [
+            "bearer",
+            "basic",
+            "apikey"
+          ],
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "title": "AuthConfig",
+      "type": "object"
+    },
+    "BodyField": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "type": {
+          "default": "string",
+          "enum": [
+            "string",
+            "number",
+            "integer",
+            "boolean",
+            "array",
+            "object"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "example": {
+          "default": null,
+          "title": "Example"
+        },
+        "required": {
+          "default": false,
+          "title": "Required",
+          "type": "boolean"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "min_length": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Min Length"
+        },
+        "max_length": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Length"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "BodyField",
+      "type": "object"
+    },
+    "Endpoint": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "method": {
+          "enum": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE",
+            "PATCH",
+            "OPTIONS",
+            "HEAD"
+          ],
+          "title": "Method",
+          "type": "string"
+        },
+        "summary": {
+          "title": "Summary",
+          "type": "string"
+        },
+        "tag": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tag"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "auth_required": {
+          "default": false,
+          "title": "Auth Required",
+          "type": "boolean"
+        },
+        "params": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EndpointParams"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "body": {
+          "items": {
+            "$ref": "#/$defs/BodyField"
+          },
+          "title": "Body",
+          "type": "array"
+        },
+        "responses": {
+          "$ref": "#/$defs/EndpointResponses"
+        }
+      },
+      "required": [
+        "path",
+        "method",
+        "summary",
+        "responses"
+      ],
+      "title": "Endpoint",
+      "type": "object"
+    },
+    "EndpointParams": {
+      "additionalProperties": false,
+      "properties": {
+        "query": {
+          "items": {
+            "$ref": "#/$defs/ParamField"
+          },
+          "title": "Query",
+          "type": "array"
+        },
+        "path": {
+          "items": {
+            "$ref": "#/$defs/ParamField"
+          },
+          "title": "Path",
+          "type": "array"
+        },
+        "header": {
+          "items": {
+            "$ref": "#/$defs/ParamField"
+          },
+          "title": "Header",
+          "type": "array"
+        }
+      },
+      "title": "EndpointParams",
+      "type": "object"
+    },
+    "EndpointResponses": {
+      "additionalProperties": false,
+      "properties": {
+        "success": {
+          "$ref": "#/$defs/ResponseSuccess"
+        },
+        "errors": {
+          "items": {
+            "$ref": "#/$defs/ResponseError"
+          },
+          "title": "Errors",
+          "type": "array"
+        }
+      },
+      "required": [
+        "success"
+      ],
+      "title": "EndpointResponses",
+      "type": "object"
+    },
+    "ParamField": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "type": {
+          "default": "string",
+          "enum": [
+            "string",
+            "number",
+            "integer",
+            "boolean",
+            "array",
+            "object"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "example": {
+          "default": null,
+          "title": "Example"
+        },
+        "required": {
+          "default": false,
+          "title": "Required",
+          "type": "boolean"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "min_length": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Min Length"
+        },
+        "max_length": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Length"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "ParamField",
+      "type": "object"
+    },
+    "ResponseError": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "title": "Status",
+          "type": "integer"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "example": {
+          "anyOf": [
+            {},
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Example"
+        }
+      },
+      "required": [
+        "status",
+        "message"
+      ],
+      "title": "ResponseError",
+      "type": "object"
+    },
+    "ResponseSuccess": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "default": 200,
+          "title": "Status",
+          "type": "integer"
+        },
+        "description": {
+          "default": "Success",
+          "title": "Description",
+          "type": "string"
+        },
+        "example": {
+          "default": null,
+          "title": "Example"
+        }
+      },
+      "title": "ResponseSuccess",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "JSON Schema for Tera Canonical Intermediate Representation (IR) specification (docs.yaml).",
+  "properties": {
+    "api": {
+      "$ref": "#/$defs/ApiConfig"
+    },
+    "endpoints": {
+      "items": {
+        "$ref": "#/$defs/Endpoint"
+      },
+      "title": "Endpoints",
+      "type": "array"
+    }
+  },
+  "required": [
+    "api",
+    "endpoints"
+  ],
+  "title": "TeraCanonicalIR",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/vichsort/tera-cli/master/schemas/tera-schema.json"
+}

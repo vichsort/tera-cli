@@ -86,3 +86,4 @@ def test_export_default_output_filename(tmp_path: Path) -> None:
     assert result.exit_code == 0
     expected_out = tmp_path / "sample.md"
     assert expected_out.exists()
+

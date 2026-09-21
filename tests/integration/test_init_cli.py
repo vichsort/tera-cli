@@ -16,6 +16,7 @@ def test_init_standard_mode(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> 
     assert (tmp_path / ".teraconfig.toml").exists()
 
     content = (tmp_path / "docs.yaml").read_text(encoding="utf-8")
+    assert "yaml-language-server: $schema=" in content
     assert "api:" in content
 
 

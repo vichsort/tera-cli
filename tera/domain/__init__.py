@@ -38,6 +38,7 @@ from .coverage import EndpointCoverage, CoverageReport
 from .security import DriftType, SecuritySeverity, SecurityIssue, SecurityDriftReport
 from .graph import GraphNode, GraphEdge, ApiGraph
 from .audit import AuditSeverity, AuditIssue, AuditReport
+from .validation import ValidationErrorDetail, ValidationReport
 
 __all__ = [
     "TeraSchema",
@@ -76,4 +77,6 @@ __all__ = [
     "AuditSeverity",
     "AuditIssue",
     "AuditReport",
+    "ValidationErrorDetail",
+    "ValidationReport",
 ]

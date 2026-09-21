@@ -11,6 +11,8 @@ from .security import SecurityDriftService
 from .server import DocServer, SpecState, run_server
 from .graph import GraphService
 from .audit import AuditService
+from .schema import get_ir_json_schema, export_ir_json_schema
+from .validation import ValidationService
 
 __all__ = [
     "run_pipeline", 
@@ -28,4 +30,7 @@ __all__ = [
     "run_server",
     "GraphService",
     "AuditService",
+    "get_ir_json_schema",
+    "export_ir_json_schema",
+    "ValidationService",
 ]

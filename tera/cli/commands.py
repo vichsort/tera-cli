@@ -20,6 +20,8 @@ from tera.services import (
     SecurityDriftService,
     SemverService,
     SyncService,
+    ValidationService,
+    export_ir_json_schema,
     load_schema_from_source,
     run_pipeline,
     run_server,
@@ -36,6 +38,7 @@ from tera.cli.presenters import (
     present_security_report,
     present_semver_report,
     present_sync_report,
+    present_validation_report,
 )
 
 # Compatibility aliases
@@ -861,4 +864,56 @@ def audit(
         failed = True
 
     if failed:
+        raise typer.Exit(code=1)
+
+
+@app.command("schema")
+def schema_cmd(
+    output_file: Optional[Path] = typer.Option(
+        None,
+        "--output",
+        "-o",
+        help="File path to save the JSON Schema. If omitted, prints to stdout.",
+    ),
+    indent: int = typer.Option(
+        2,
+        "--indent",
+        help="Indentation spaces for JSON output.",
+    ),
+) -> None:
+    """
+    Exports the JSON Schema for the canonical Tera IR (docs.yaml).
+    """
+    try:
+        content = export_ir_json_schema(output_path=output_file, indent=indent)
+        if output_file:
+            typer.secho(f"\n✅ Tera IR schema exported to {output_file}", fg=typer.colors.GREEN, bold=True)
+        else:
+            typer.echo(content)
+    except Exception as e:
+        print_error("Schema Export Failed", str(e))
+        raise typer.Exit(code=1)
+
+
+@app.command("validate")
+def validate_cmd(
+    file_path: Path = typer.Argument(
+        Path("docs.yaml"),
+        help="Path to the documentation file to validate. Default: docs.yaml",
+    ),
+    to_json: bool = typer.Option(
+        False,
+        "--json",
+        "-j",
+        help="Output validation result as JSON.",
+    ),
+) -> None:
+    """
+    Validates a docs.yaml specification against the canonical Tera IR schema.
+    """
+    service = ValidationService()
+    report = service.validate(file_path)
+    present_validation_report(report, as_json=to_json)
+
+    if not report.is_valid:
         raise typer.Exit(code=1)

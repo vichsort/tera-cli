@@ -45,3 +45,4 @@ runs:
         else
           tera ${{ inputs.command }} ${{ inputs.args }}
         fi
+

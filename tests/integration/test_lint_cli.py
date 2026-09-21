@@ -81,3 +81,4 @@ def test_lint_cli_file_not_found() -> None:
     result = runner.invoke(app, ["lint", "non_existent_file.yaml"])
 
     assert result.exit_code == 1
+

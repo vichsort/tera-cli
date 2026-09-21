@@ -187,3 +187,4 @@ def test_postman_writer(tmp_path: Path, sample_schema: TeraSchema) -> None:
     body_data = json.loads(post_item["request"]["body"]["raw"])
     assert "name" in body_data
     assert "age" in body_data
+

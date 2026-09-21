@@ -60,9 +60,9 @@ escrito à mão ┘                    └─→ Postman collection (export)
 
 Pra virar "produto" de verdade (não só arquitetura interna):
 
-1. Congelar/versionar o schema publicamente ("Tera IR v1"), com um `tera validate`.
-2. Deixar claro que dá pra **escrever** o `docs.yaml` à mão, não só gerar via scan.
-3. Publicar o JSON Schema do IR separado do código Python.
+1. [x] Congelar/versionar o schema publicamente ("Tera IR v1") com comando `tera validate`.
+2. [x] Deixar claro que dá pra **escrever** o `docs.yaml` à mão via autocompletion nativo (`yaml-language-server: $schema=...`).
+3. [x] Publicar e exportar o JSON Schema oficial do IR (`tera schema`) em `schemas/tera-schema.json`.
 
 ### Ferramentas maduras que já existem — não reinventar
 
@@ -137,7 +137,7 @@ Executada em 3 etapas cirúrgicas para consolidar a escalabilidade do projeto:
 
 ## 6. Estado Atual de Validação e Qualidade
 
-- **Suíte de Testes**: 203 testes automatizados (unitários e de integração), 100% passando em ~1.9s.
+- **Suíte de Testes**: 217 testes automatizados (unitários e de integração), 100% passando em ~1.9s.
 - **Tipagem Estrita**: Pyright configurado no modo `strict` com 0 erros e 0 warnings.
 - **Clean Architecture**: Domínio desacoplado de frameworks de apresentação e infraestrutura externa.
 

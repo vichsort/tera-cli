@@ -96,3 +96,4 @@ def test_scan_cli_invalid_import_target(tmp_path: Path, monkeypatch: pytest.Monk
     result = runner.invoke(app, ["scan", "non_existent_module:app"])
 
     assert result.exit_code != 0
+

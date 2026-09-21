@@ -50,3 +50,4 @@ def test_github_action_definition() -> None:
     runs = cast(Dict[str, Any], action["runs"])
     assert runs["using"] == "composite"
     assert len(runs["steps"]) >= 3
+

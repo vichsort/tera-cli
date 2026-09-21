@@ -1,7 +1,6 @@
-# This is an automatically generated Tera template for initializing a standard OpenAPI specification.
-# You can customize this template according to your API requirements.
-# Use 'tera build' to validate and generate an JSON or different formats.
-# The documentation for Tera can be found at  -- TODO: https://tera.rs/docs/ -- 
+# yaml-language-server: $schema=https://raw.githubusercontent.com/vichsort/tera-cli/master/schemas/tera-schema.json
+# Automatically generated Tera template for initializing an API specification.
+# Documentation: https://github.com/vichsort/tera-cli
 
 api:
   name: "My Awesome API"

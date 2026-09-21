@@ -46,3 +46,4 @@ def test_init_service_template_missing(tmp_path: Path) -> None:
 
     with pytest.raises(FileNotFoundError, match="Template not found"):
         service.create_project(tmp_path)
+
