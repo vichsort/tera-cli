@@ -73,7 +73,7 @@ def test_entry_point_plugin_class_hook() -> None:
     assert "dummy_class" in driver_reg.list_drivers()
 
 
-def test_entry_point_plugin_error_isolation() -> None:
+def test_entry_point_plugin_error_isolation(capsys: Any) -> None:
     reset_plugins()
     driver_reg = DriverRegistry()
     writer_reg = WriterRegistry()
@@ -92,6 +92,8 @@ def test_entry_point_plugin_error_isolation() -> None:
     assert "faulty_plugin" not in loaded
     assert "valid_plugin" in loaded
     assert "dummy" in driver_reg.list_drivers()
+    captured = capsys.readouterr()
+    assert "Failed to load entry point plugin 'faulty_plugin'" in captured.err
 
 
 def test_load_toml_plugins_valid(tmp_path: Path) -> None:
@@ -130,7 +132,7 @@ load = [
     assert "local_test" in driver_reg.list_drivers()
 
 
-def test_load_toml_plugins_resilience(tmp_path: Path) -> None:
+def test_load_toml_plugins_resilience(tmp_path: Path, capsys: Any) -> None:
     reset_plugins()
     driver_reg = DriverRegistry()
     writer_reg = WriterRegistry()
@@ -142,6 +144,15 @@ def test_load_toml_plugins_resilience(tmp_path: Path) -> None:
     broken_toml = tmp_path / "broken.toml"
     broken_toml.write_text("[plugins\nload = broken", encoding="utf-8")
     assert load_toml_plugins(driver_reg, writer_reg, config_path=broken_toml) == []
+    captured = capsys.readouterr()
+    assert "Failed to parse plugin configuration" in captured.err
+
+    # Deprecated drivers/writers keys warning
+    legacy_toml = tmp_path / "legacy.toml"
+    legacy_toml.write_text("[plugins]\ndrivers = ['foo']\nwriters = ['bar']", encoding="utf-8")
+    assert load_toml_plugins(driver_reg, writer_reg, config_path=legacy_toml) == []
+    captured = capsys.readouterr()
+    assert "are not supported" in captured.err
 
     # Non-existent module in load table
     invalid_mod_toml = tmp_path / "invalid_mod.toml"
@@ -156,6 +167,8 @@ load = [
     )
     loaded = load_toml_plugins(driver_reg, writer_reg, config_path=invalid_mod_toml)
     assert loaded == []
+    captured = capsys.readouterr()
+    assert "Failed to load plugin 'non_existent_package_foo_bar_xyz:hook'" in captured.err
 
 
 def test_load_plugins_idempotency(tmp_path: Path) -> None:
@@ -187,3 +200,27 @@ load = ["idempotent_plugin:register_tera_plugin"]
     # Second run without reset should not re-run the same plugin
     second_result = load_plugins(driver_reg, writer_reg, config_path=toml_file)
     assert len(second_result["toml"]) == 0
+
+
+def test_example_plugin_integration() -> None:
+    reset_plugins()
+    plugin_dir = Path(__file__).resolve().parent.parent.parent / "examples" / "plugin_example"
+    toml_path = plugin_dir / "tera.toml"
+    routes_path = plugin_dir / "api.routes"
+    assert toml_path.exists()
+    assert routes_path.exists()
+
+    driver_reg = DriverRegistry()
+    writer_reg = WriterRegistry()
+    loaded = load_toml_plugins(driver_reg, writer_reg, config_path=toml_path)
+    assert len(loaded) == 1
+    assert "routes" in driver_reg.list_drivers()
+
+    driver = driver_reg.get(routes_path)
+    schema = driver.load()
+    assert schema.api.name == "Custom Routes Plugin API"
+    assert len(schema.endpoints) == 4
+    paths = [ep.path for ep in schema.endpoints]
+    assert "/api/v1/health" in paths
+    assert "/api/v1/users" in paths
+    assert "/api/v1/metrics" in paths

@@ -1,0 +1,6 @@
+# Sample route definition file for CustomRouteListDriver
+GET    /api/v1/health       # Health check ping
+GET    /api/v1/users        # List all registered users
+POST   /api/v1/users        # Register a new user
+GET    /api/v1/metrics      # System telemetry metrics
+

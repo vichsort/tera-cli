@@ -415,13 +415,28 @@ Ignore patterns for scanners can be configured in `.teraignore` (using gitignore
 2. **Tier 2 (Lazy Extras)**: Installed on-demand via optional dependencies.
 3. **Tier 3 (External & Local Plugins)**:
    - Dynamic discovery via `importlib.metadata` entry points group `tera.plugins`.
-   - Local plugin scripts configured in `tera.toml`:
+   - Local plugin modules configured in `tera.toml` pointing to callable registration hooks:
 
 ```toml
 [plugins]
-drivers = ["custom_driver:CustomDriver"]
-writers = ["custom_writer:CustomWriter"]
+load = ["custom_plugin:register_tera_plugin"]
 ```
+
+The registration function receives `(driver_registry, writer_registry)` and registers custom drivers or writers:
+
+```python
+from tera.core.registry import DriverRegistry, WriterRegistry
+
+def register_tera_plugin(driver_registry: DriverRegistry, writer_registry: WriterRegistry) -> None:
+    driver_registry.register(
+        "custom",
+        lambda source: CustomDriver(source),
+        matcher=lambda s: str(s).endswith(".custom"),
+        priority=85,
+    )
+```
+
+A complete end-to-end working example is available in [`examples/plugin_example/`](examples/plugin_example/).
 
 ---
 
@@ -431,6 +446,7 @@ The repository includes a complete suite of examples under `examples/`:
 - `examples/flask_app/`: Sample Flask app with auth decorators and Pydantic models.
 - `examples/fastapi_app/`: Duck-typed FastAPI app showcasing native introspection.
 - `examples/specs/`: Canonical `docs.yaml`, evolved `docs.v2.yaml`, HTTP Archive `traffic.har`, and Postman Collection.
+- `examples/plugin_example/`: End-to-end custom plugin with `.routes` toy driver.
 
 To run an end-to-end automated walkthrough of all features:
 
@@ -441,7 +457,7 @@ make demo
 Run tests and type checking:
 
 ```bash
-make test        # Runs pytest (222 tests)
+make test        # Runs pytest (226+ tests)
 make typecheck   # Runs pyright strict mode
 make check       # Runs test, typecheck, lint, and validate
 ```

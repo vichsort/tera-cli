@@ -1,0 +1,7 @@
+# Tera Plugin Configuration
+# Register custom drivers and writers via callable registration hooks.
+[plugins]
+load = [
+    "custom_plugin:register_tera_plugin"
+]
+

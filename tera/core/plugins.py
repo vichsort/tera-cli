@@ -66,8 +66,9 @@ def load_entry_point_plugins(
             _invoke_plugin_target(target, driver_registry, writer_registry)
             _loaded_plugins.add(ep_name)
             loaded.append(ep_name)
-        except Exception:
+        except Exception as e:
             # Graceful error isolation: faulty third-party plugins must not crash core CLI
+            sys.stderr.write(f"Warning: Failed to load entry point plugin '{ep_name}': {e}\n")
             continue
 
     return loaded
@@ -91,13 +92,20 @@ def load_toml_plugins(
     try:
         with open(path, "rb") as f:
             data = tomllib.load(f)
-    except Exception:
+    except Exception as e:
+        sys.stderr.write(f"Warning: Failed to parse plugin configuration in '{path}': {e}\n")
         return loaded
 
     plugins_cfg = data.get("plugins")
     if not isinstance(plugins_cfg, dict):
         return loaded
     plugins_dict = cast(Dict[str, Any], plugins_cfg)
+
+    if "drivers" in plugins_dict or "writers" in plugins_dict:
+        sys.stderr.write(
+            f"Warning: '[plugins.drivers]' and '[plugins.writers]' in '{path.name}' are not supported. "
+            "Use 'load = [\"module:register_tera_plugin\"]' instead.\n"
+        )
 
     load_targets = plugins_dict.get("load")
     if not isinstance(load_targets, list):
@@ -113,6 +121,7 @@ def load_toml_plugins(
 
     for item in targets_list:
         if not isinstance(item, str):
+            sys.stderr.write(f"Warning: Invalid plugin item '{item}' in '{path.name}'. Expected string.\n")
             continue
 
         specifier = item.strip()
@@ -130,8 +139,9 @@ def load_toml_plugins(
             _invoke_plugin_target(target, driver_registry, writer_registry)
             _loaded_plugins.add(specifier)
             loaded.append(specifier)
-        except Exception:
-            # Graceful error isolation
+        except Exception as e:
+            # Graceful error isolation with non-fatal warning
+            sys.stderr.write(f"Warning: Failed to load plugin '{specifier}': {e}\n")
             continue
 
     return loaded
