@@ -1,4 +1,6 @@
 import re
+import types
+import typing
 from typing import Any, Dict, List, Set, cast
 from tera.drivers.inspection import loader, parser, ast_parser, type_utils
 from tera.domain import (
@@ -203,17 +205,39 @@ class FlaskAppDriver:
 
         return "string"
 
+    def _unwrap_type_hint(self, type_hint: Any) -> Any:
+        """Unwraps Optional, Union, and Annotated type hints to their underlying type."""
+        if type_hint is None:
+            return None
+        origin = typing.get_origin(type_hint)
+        is_union = origin is typing.Union or (hasattr(types, "UnionType") and origin is types.UnionType)
+        if is_union:
+            args = [arg for arg in typing.get_args(type_hint) if arg is not type(None)]
+            if args:
+                return self._unwrap_type_hint(args[0])
+        if hasattr(typing, "Annotated") and origin is typing.Annotated:
+            args = typing.get_args(type_hint)
+            if args:
+                return self._unwrap_type_hint(args[0])
+        return type_hint
+
     def _map_type_hint_to_field_type(self, type_hint: Any) -> FieldType:
         """Maps Python type hint to JSON Schema / FieldType."""
-        if type_hint is int:
+        if type_hint is None:
+            return "string"
+        unwrapped = self._unwrap_type_hint(type_hint)
+        origin = typing.get_origin(unwrapped)
+        target = origin if origin is not None else unwrapped
+
+        if target is int or (isinstance(target, type) and issubclass(target, int) and not issubclass(target, bool)):
             return "integer"
-        if type_hint is float:
+        if target is float or (isinstance(target, type) and issubclass(target, float)):
             return "number"
-        if type_hint is bool:
+        if target is bool or (isinstance(target, type) and issubclass(target, bool)):
             return "boolean"
-        if type_hint is list:
+        if target in (list, set, tuple) or (isinstance(target, type) and issubclass(target, (list, set, tuple))):
             return "array"
-        if type_hint is dict:
+        if target is dict or (isinstance(target, type) and issubclass(target, dict)):
             return "object"
         return "string"
 
@@ -228,9 +252,20 @@ class FlaskAppDriver:
 
     def _get_example_for_type(self, type_hint: Any) -> Any:
         """Generates an example based on the type hint."""
-        if type_hint is int: return 0
-        if type_hint is float: return 0.0
-        if type_hint is bool: return True
-        if type_hint is dict: return {}
-        if type_hint is list: return []
+        if type_hint is None:
+            return "string"
+        unwrapped = self._unwrap_type_hint(type_hint)
+        origin = typing.get_origin(unwrapped)
+        target = origin if origin is not None else unwrapped
+
+        if target is int or (isinstance(target, type) and issubclass(target, int) and not issubclass(target, bool)):
+            return 0
+        if target is float or (isinstance(target, type) and issubclass(target, float)):
+            return 0.0
+        if target is bool or (isinstance(target, type) and issubclass(target, bool)):
+            return True
+        if target is dict or (isinstance(target, type) and issubclass(target, dict)):
+            return {}
+        if target in (list, set, tuple) or (isinstance(target, type) and issubclass(target, (list, set, tuple))):
+            return []
         return "string"

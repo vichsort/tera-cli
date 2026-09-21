@@ -35,6 +35,8 @@ def test_extract_pydantic_fields_types() -> None:
     assert field_map["metadata"].example == {}
 
 def test_map_type_hint_to_field_type() -> None:
+    from typing import Optional, Union, Any
+
     driver = FlaskAppDriver("dummy:app")
 
     assert driver._map_type_hint_to_field_type(int) == "integer"
@@ -43,6 +45,26 @@ def test_map_type_hint_to_field_type() -> None:
     assert driver._map_type_hint_to_field_type(list) == "array"
     assert driver._map_type_hint_to_field_type(dict) == "object"
     assert driver._map_type_hint_to_field_type(str) == "string"
+
+    # Optional / Union unwrapping
+    assert driver._map_type_hint_to_field_type(Optional[int]) == "integer"
+    assert driver._map_type_hint_to_field_type(Optional[float]) == "number"
+    assert driver._map_type_hint_to_field_type(Optional[bool]) == "boolean"
+    assert driver._map_type_hint_to_field_type(Union[int, None]) == "integer"
+    assert driver._map_type_hint_to_field_type(Union[None, int]) == "integer"
+    assert driver._map_type_hint_to_field_type(int | None) == "integer"
+    assert driver._map_type_hint_to_field_type(Optional[List[str]]) == "array"
+    assert driver._map_type_hint_to_field_type(Optional[Dict[str, Any]]) == "object"
+    assert driver._map_type_hint_to_field_type(List[str]) == "array"
+    assert driver._map_type_hint_to_field_type(Dict[str, Any]) == "object"
+
+    # Examples for types
+    assert driver._get_example_for_type(Optional[int]) == 0
+    assert driver._get_example_for_type(int | None) == 0
+    assert driver._get_example_for_type(Optional[float]) == 0.0
+    assert driver._get_example_for_type(Optional[bool]) is True
+    assert driver._get_example_for_type(Optional[List[str]]) == []
+    assert driver._get_example_for_type(Optional[Dict[str, Any]]) == {}
 
 
 def test_flask_driver_extract_converters_and_route_types() -> None:
@@ -101,5 +123,37 @@ def test_flask_driver_extract_converters_and_route_types() -> None:
     assert ep_order.params.path[0].name == "order_id"
     assert ep_order.params.path[0].type == "integer"
     assert ep_order.params.path[0].example == 0
+
+
+def test_flask_driver_query_params_optional_types() -> None:
+    from typing import Optional
+    import flask
+
+    app = flask.Flask("test_optional_query_app")
+
+    @app.route("/products", methods=["GET"])
+    def list_products(limit: Optional[int] = None, active: Optional[bool] = True, tags: Optional[list[str]] = None):
+        """List products with optional pagination and filtering"""
+        return "ok"
+
+    driver = FlaskAppDriver("dummy:app")
+    rules = {r.endpoint: r for r in app.url_map.iter_rules() if r.endpoint != "static"}
+
+    ep = driver._process_rule(app, rules["list_products"], "GET")
+    assert ep.params is not None
+    query_map = {q.name: q for q in ep.params.query}
+
+    assert "limit" in query_map
+    assert query_map["limit"].type == "integer"
+    assert query_map["limit"].example == 0
+    assert query_map["limit"].required is False
+
+    assert "active" in query_map
+    assert query_map["active"].type == "boolean"
+    assert query_map["active"].example is True
+
+    assert "tags" in query_map
+    assert query_map["tags"].type == "array"
+    assert query_map["tags"].example == []
 
 

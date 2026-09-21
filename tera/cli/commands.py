@@ -4,9 +4,11 @@ from typing import Optional, Union, cast
 from pydantic import ValidationError
 import typer
 
+from tera.contracts import TeraDriver
 from tera.core import factory, loader
 from tera.core.factory import WriterFormatStyle
 from tera.domain import LintSeverity
+from tera.drivers import YamlFileDriver
 from tera.exceptions import TeraError
 from tera.domain.models import TeraSchema
 from tera.services import (
@@ -65,20 +67,33 @@ def _load_schema_or_exit(source: Union[str, Path], label: str = "Specification")
 
 
 def _execute_pipeline(
-    input_source: str,
+    input_source: Union[str, TeraDriver],
     output_path: Path,
     format_style: WriterFormatStyle = "tera",
+    source_label: Optional[str] = None,
 ) -> None:
     """
     Helper function to execute the pipeline safely.
     Connects: Factory -> Pipeline -> UI
     """
     try:
-        driver = factory.get_driver(input_source)
+        if isinstance(input_source, str):
+            driver = factory.get_driver(input_source)
+            display_source = source_label or input_source
+        else:
+            driver = input_source
+            display_source = (
+                source_label
+                or getattr(driver, "import_string", None)
+                or getattr(driver, "file_path", None)
+                or getattr(driver, "source", None)
+                or driver.__class__.__name__
+            )
+
         writer = factory.get_writer(output_path, format_style=format_style)
 
         run_pipeline(driver, writer)
-        print_success(input_source, str(output_path))
+        print_success(str(display_source), str(output_path))
 
     except ValidationError as e:
         print_validation_error(e)
@@ -196,10 +211,36 @@ def scan(
         )
         raise typer.Exit(code=1)
 
-    typer.secho(f"Scanning Flask App: {final_target}...", fg=typer.colors.MAGENTA)
+    try:
+        resolved_driver = factory.get_driver(final_target)
+    except Exception:
+        resolved_driver = None
+
+    driver_labels: dict[str, str] = {
+        "FlaskAppDriver": "Flask App",
+        "FastApiDriver": "FastAPI App",
+        "HarDriver": "HTTP Archive (HAR)",
+        "PostmanCollectionDriver": "Postman Collection",
+        "OpenApiDriver": "OpenAPI Specification",
+        "YamlFileDriver": "Tera IR Specification",
+        "GitFileDriver": "Git Revision",
+        "HttpDriver": "Remote Specification",
+    }
+    label = (
+        driver_labels.get(resolved_driver.__class__.__name__, resolved_driver.__class__.__name__)
+        if resolved_driver is not None
+        else "Application"
+    )
+
+    typer.secho(f"Scanning {label}: {final_target}...", fg=typer.colors.MAGENTA)
 
     final_output = output_file or config.output or Path("docs.yaml")
-    _execute_pipeline(final_target, final_output, format_style="tera")
+    _execute_pipeline(
+        resolved_driver if resolved_driver is not None else final_target,
+        final_output,
+        format_style="tera",
+        source_label=final_target,
+    )
 
 
 @app.command()
@@ -624,7 +665,7 @@ def security(
 def import_spec(
     spec_file: Path = typer.Argument(
         ...,
-        help="Path to the OpenAPI (3.0/3.1) or Swagger (2.0) file (.json or .yaml) to import.",
+        help="Path to the specification file (OpenAPI/Swagger, Postman Collection, or HAR) to import.",
     ),
     output: Path = typer.Option(
         Path("docs.yaml"),
@@ -646,20 +687,22 @@ def import_spec(
     ),
 ) -> None:
     """
-    Imports an existing OpenAPI/Swagger specification (JSON or YAML) into the canonical Tera IR (docs.yaml).
+    Imports an external specification (OpenAPI/Swagger, Postman Collection, or HAR) into canonical Tera IR (docs.yaml).
     """
     if not spec_file.exists():
-        print_error("File Not Found", f"OpenAPI specification '{spec_file}' does not exist.")
+        print_error("File Not Found", f"Specification file '{spec_file}' does not exist.")
         raise typer.Exit(code=1)
 
     try:
-        driver = factory.get_driver(spec_file, driver_type="openapi")
+        driver = factory.get_driver(spec_file)
+        if isinstance(driver, YamlFileDriver):
+            driver = factory.get_driver(spec_file, driver_type="openapi")
         schema = driver.load()
     except TeraError as e:
         print_error(e.title, e.message)
         raise typer.Exit(code=1)
     except Exception as e:
-        print_error("Import Failed", f"Could not parse OpenAPI specification: {e}")
+        print_error("Import Failed", f"Could not parse specification: {e}")
         raise typer.Exit(code=1)
 
     if to_json:
