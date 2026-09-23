@@ -1,0 +1,10 @@
+include LICENSE
+include README.md
+include docs.yaml
+recursive-include tera/templates *
+
+prune .github
+prune examples
+prune tests
+global-exclude *.py[cod] __pycache__ *.so
+
