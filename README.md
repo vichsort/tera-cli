@@ -1,14 +1,28 @@
+<div align="center">
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset=".github/assets/tera-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset=".github/assets/tera-light.svg">
+  <img alt="Tera CLI Logo" src=".github/assets/tera-light.svg" height="120" />
+</picture>
+
 # tera-cli
 
-[![CI](https://github.com/vichsort/tera-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/vichsort/tera-cli/actions/workflows/ci.yml)
-[![Python Version](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue)](https://www.python.org/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
-[![Type Checking](https://img.shields.io/badge/type--checking-pyright%20strict-blueviolet)](https://github.com/microsoft/pyright)
-[![Code Style](https://img.shields.io/badge/architecture-clean%20%26%20solid-informational)](https://blog.cleancoder.com/)
+**Documentation as Code Hub — Canonical Intermediate Representation (IR) for API Specifications.**  
+Decouple API documentation ingestion from output generation with deterministic schema contracts.
 
-> **Documentation as Code Tool** — Canonical Intermediate Representation (IR) Hub for API Specifications.
+[![PyPI](https://img.shields.io/pypi/v/tera-cli?style=flat-square&color=3776AB)](https://pypi.org/project/tera-cli/)
+[![Python Version](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-3776AB?style=flat-square)](https://www.python.org/)
+[![CI](https://img.shields.io/github/actions/workflow/status/vichsort/tera-cli/ci.yml?style=flat-square&label=CI)](https://github.com/vichsort/tera-cli/actions)
+[![Type Checking](https://img.shields.io/badge/pyright-strict-blueviolet?style=flat-square)](https://github.com/microsoft/pyright)
+[![Architecture](https://img.shields.io/badge/architecture-clean%20%26%20solid-informational?style=flat-square)](https://blog.cleancoder.com/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green?style=flat-square)](https://opensource.org/licenses/MIT)
 
-`tera-cli` is a developer-centric CLI designed to decouple API documentation inputs from outputs. Instead of translating directly from code to documentation, `tera` uses a canonical intermediate representation (`docs.yaml`) that can be scanned from source code, written by hand with full IDE autocomplete, reverse-engineered from network traffic, linted in CI gates, and exported into multiple formats.
+</div>
+
+---
+
+<div align="center">
 
 ```text
 Flask App (scan) ────────┐
@@ -20,6 +34,14 @@ HTTP/HTTPS URL (import) ─┤                             ├─→ Interactive
 Git Revision (driver) ───┤                             ├─→ Postman Collection v2.1 (export)
 Handcrafted YAML (init) ─┘                             └─→ Local Dev Server (serve)
 ```
+
+</div>
+
+---
+
+## About the Project
+
+`tera-cli` is a developer-centric CLI designed to decouple API documentation inputs from outputs. Instead of translating directly from code to documentation, `tera` uses a canonical intermediate representation (`docs.yaml`) that can be scanned from source code, written by hand with full IDE autocomplete, reverse-engineered from network traffic, linted in CI gates, and exported into multiple formats.
 
 ---
 
@@ -54,7 +76,34 @@ Built with Clean Architecture principles and strict layer isolation:
 
 ---
 
+## Tech Stack
+
+| Layer / Component | Technology | Description |
+|---|---|---|
+| **CLI Framework** | Typer 0.12+ (Click) | Composable subcommands, autocompletion, and decoupled terminal presenters |
+| **Domain & Contracts** | Pydantic v2.10+ / Python Protocols | Canonical IR models, strict schema validation, and JSON Schema export |
+| **AST & Introspection** | Python `ast` + `inspect` | Zero-dependency static code analysis for Flask routes, docstrings, and decorators |
+| **Template Engine** | Jinja2 3.1+ | Offline standalone documentation rendering (Redoc, Markdown templates) |
+| **Dev Server** | Python `http.server` | Zero-dependency local documentation server with live-reloading UI |
+| **Serialization** | PyYAML 6.0+ / `tomli` | High-fidelity YAML/JSON/TOML parsing with comment preservation |
+| **Type Checking** | Pyright (Strict Mode) | 100% strict type safety across all drivers, services, and CLI commands |
+| **Testing** | Pytest 8.0+ | Comprehensive unit and integration test coverage across Python 3.10-3.12 |
+
+---
+
 ## Installation
+
+### Via pipx (Recommended for standalone CLI)
+
+```bash
+pipx install tera-cli
+```
+
+### Via pip
+
+```bash
+pip install tera-cli
+```
 
 ### From Source
 
