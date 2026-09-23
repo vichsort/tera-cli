@@ -22,7 +22,7 @@ jobs:
           echo "pyproject:  ${PYPROJECT_VERSION}"
 
           if [ "$TAG_VERSION" != "$PYPROJECT_VERSION" ]; then
-            echo "::error::A tag '${GITHUB_REF_NAME}' não bate com a versão '${PYPROJECT_VERSION}' do pyproject.toml."
+            echo "::error::Tag '${GITHUB_REF_NAME}' does not match pyproject.toml version '${PYPROJECT_VERSION}'."
             exit 1
           fi
 

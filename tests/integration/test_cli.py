@@ -7,7 +7,7 @@ runner = CliRunner()
 
 def test_build_command_happy_path(tmp_path: Path) -> None:
     """
-    Cria um arquivo YAML temporário real, roda o build e verifica se o JSON nasceu.
+    Creates a temporary YAML file, executes build, and asserts JSON output was generated.
     """
     d = tmp_path / "subdir"
     d.mkdir()
@@ -43,7 +43,7 @@ def test_build_command_happy_path(tmp_path: Path) -> None:
     assert output_file.exists()
 
 def test_build_file_not_found() -> None:
-    """Testa se o sistema falha quando o arquivo não existe."""
+    """Tests if the system fails gracefully when the target file does not exist."""
     result = runner.invoke(app, ["build", "ghost_file.yaml"])
     
     assert result.exit_code != 0

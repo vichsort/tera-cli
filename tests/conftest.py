@@ -3,7 +3,7 @@ from tera.domain.models import TeraSchema, Endpoint, ResponseSuccess, EndpointRe
 
 @pytest.fixture
 def minimal_schema_model() -> TeraSchema:
-    """Retorna um objeto TeraSchema válido e minimalista para testes unitários."""
+    """Returns a valid and minimalist TeraSchema object for unit tests."""
     return TeraSchema(
         api=ApiConfig(
             name="Test API", 

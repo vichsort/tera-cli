@@ -3,7 +3,7 @@ from tera.adapters.openapi import TeraOpenApiAdapter
 from tera.domain.models import TeraSchema
 
 def test_basic_conversion_structure(minimal_schema_model: TeraSchema) -> None:
-    """Testa se a estrutura básica do OpenAPI é gerada corretamente."""
+    """Tests if the basic OpenAPI structure is generated correctly."""
     converter = TeraOpenApiAdapter(minimal_schema_model)
     result = converter.convert()
 
@@ -12,16 +12,16 @@ def test_basic_conversion_structure(minimal_schema_model: TeraSchema) -> None:
     assert result["paths"]["/test"]["get"]["operationId"] == "getTest"
 
 def test_inference_primitive_types(minimal_schema_model: TeraSchema) -> None:
-    """Testa se strings, ints e bools são inferidos corretamente."""
+    """Tests if strings, integers and booleans are inferred correctly."""
     converter = TeraOpenApiAdapter(minimal_schema_model)
     
-    # Teste isolado do método privado de inferência
+    # Isolated test of private schema inference method
     assert converter._infer_schema_recursive("texto") == {"type": "string"}
     assert converter._infer_schema_recursive(123) == {"type": "integer"}
     assert converter._infer_schema_recursive(True) == {"type": "boolean"}
 
 def test_inference_nested_object(minimal_schema_model: TeraSchema) -> None:
-    """Testa a RECURSÃO: Objeto dentro de objeto."""
+    """Tests recursive schema inference on nested dictionary objects."""
     converter = TeraOpenApiAdapter(minimal_schema_model)
     
     complex_data = {
@@ -36,11 +36,11 @@ def test_inference_nested_object(minimal_schema_model: TeraSchema) -> None:
     assert schema["type"] == "object"
     assert "user" in schema["properties"]
     assert schema["properties"]["user"]["type"] == "object"
-    # Verifica o nível mais profundo
+    # Verify deepest nested field
     assert schema["properties"]["user"]["properties"]["age"]["type"] == "integer"
 
 def test_inference_array(minimal_schema_model: TeraSchema) -> None:
-    """Testa se listas são convertidas para arrays tipados."""
+    """Tests if lists are converted into typed arrays."""
     converter = TeraOpenApiAdapter(minimal_schema_model)
     
     list_data = ["item1", "item2"]
