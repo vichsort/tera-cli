@@ -1,7 +1,11 @@
 import importlib
 import importlib.metadata
 import sys
-import tomllib
+
+if sys.version_info >= (3, 11):
+    import tomllib
+else:
+    import tomli as tomllib
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, cast
 
@@ -91,7 +95,8 @@ def load_toml_plugins(
 
     try:
         with open(path, "rb") as f:
-            data = tomllib.load(f)
+            raw: Any = tomllib.load(f)
+            data: Dict[str, Any] = cast(Dict[str, Any], raw) if isinstance(raw, dict) else {}
     except Exception as e:
         sys.stderr.write(f"Warning: Failed to parse plugin configuration in '{path}': {e}\n")
         return loaded

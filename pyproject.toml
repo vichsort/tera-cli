@@ -60,6 +60,5 @@ tera = ["templates/*"]
 
 [tool.pyright]
 include = ["tera", "tests"]
-venvPath = "."
-venv = ".venv"
 typeCheckingMode = "strict"
+pythonVersion = "3.10"
