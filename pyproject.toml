@@ -41,6 +41,7 @@ dev = [
     "setuptools>=61.0",
     "wheel",
     "pyright>=1.1.0",
+    "tomli>=2.0.0",
 ]
 
 [project.scripts]
@@ -61,4 +62,3 @@ tera = ["templates/*"]
 [tool.pyright]
 include = ["tera", "tests"]
 typeCheckingMode = "strict"
-pythonVersion = "3.10"
